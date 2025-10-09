@@ -1,0 +1,19 @@
+name: openapi_types
+description: A Dart package providing OpenAPI types and utilities for API documentation.
+version: 1.0.0
+repository: https://github.com/avesbox/openapi_types
+funding:
+  - https://github.com/sponsors/francescovallone
+topics: 
+  - dart
+  - openapi
+  - api
+  - documentation
+  - swagger
+
+environment:
+  sdk: '>=3.9.0 <4.0.0'
+
+dev_dependencies:
+  lints: ^6.0.0
+  test: ^1.25.6
