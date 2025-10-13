@@ -1,10 +1,8 @@
-import 'dart:convert';
-
 import 'package:openapi_types/openapi_types.dart';
 
 void main(List<String> arguments) {
-  final schemaV31 = DocumentV31(
-    info: InfoObjectV31(title: 'Demo', version: '1.0.0'),
+  final _ = DocumentV31(
+    info: const InfoObjectV31(title: 'Demo', version: '1.0.0'),
     structure: PathsWebhooksComponentsV31(
       paths: {
         '/ping': PathItemObjectV31(
@@ -19,5 +17,4 @@ void main(List<String> arguments) {
       },
     ),
   );
-  print(jsonEncode(schemaV31.toMap()));
 }

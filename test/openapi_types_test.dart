@@ -5,14 +5,15 @@ import 'package:test/test.dart';
 void main() {
   test('DocumentV31 accepts paths structure', () {
     final document = DocumentV31(
-      info: InfoObjectV31(title: 'Demo', version: '1.0.0'),
+      info: const InfoObjectV31(title: 'Demo', version: '1.0.0'),
       structure: PathsWebhooksComponentsV31(
         paths: {
           '/ping': PathItemObjectV31(
             operations: {
               'get': OperationObjectV31(
-                responses: ResponsesV3({
-                  200: ResponseObjectV3(description: 'pong'),
+                responses: ResponsesV31({
+                  '200': ResponseObjectV3(description: 'pong'),
+                  'default': ResponseObjectV3(description: 'unexpected error'),
                 }),
               ),
             },
