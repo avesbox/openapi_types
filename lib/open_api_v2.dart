@@ -18,9 +18,6 @@ class DocumentV2<T extends Map<String, dynamic>>
   /// The host (name or IP) serving the API.
   final String? host;
 
-  /// The metadata about the API.
-  final InfoObject info;
-
   /// The Swagger version (should be "2.0").
   final String swagger;
 
@@ -55,8 +52,8 @@ class DocumentV2<T extends Map<String, dynamic>>
     required this.definitions,
     this.externalDocs,
     this.host,
-    required this.info,
-    required this.swagger,
+    required super.info,
+    this.swagger = '2.0',
     this.schemes,
     this.produces,
     this.tags,
@@ -115,7 +112,6 @@ class DocumentV2<T extends Map<String, dynamic>>
   Map<String, dynamic> toMap() {
     return {
       'swagger': swagger,
-      'info': info.toMap(),
       if (host != null) 'host': host,
       if (basePath != null) 'basePath': basePath,
       if (schemes != null) 'schemes': schemes,
@@ -142,6 +138,7 @@ class DocumentV2<T extends Map<String, dynamic>>
       if (tags != null && tags!.isNotEmpty)
         'tags': tags!.map((tag) => tag.toMap()).toList(),
       if (externalDocs != null) 'externalDocs': externalDocs!.toMap(),
+      ...super.toMap()
     };
   }
 }
@@ -325,18 +322,12 @@ class SecuritySchemeOAuth2AccessCodeV2 extends SecuritySchemeOAuth2V2 {
 }
 
 /// Path item object representing the operations available on a single path.
-class PathItemObjectV2 extends OpenApiObject<Map<String, dynamic>> {
-  /// A reference to an external definition of the path item.
-  final String? ref;
-
-  /// A list of parameters that are applicable for all the operations described under this path.
-  final List<ParameterObjectV2>? parameters;
-
-  /// A map of HTTP methods to their corresponding operation objects.
-  final Map<String, OperationObjectV2>? operations;
+class PathItemObjectV2 extends OpenApiPathItem<Map<String, dynamic>, ParameterObjectV2, OperationObjectV2> {
 
   /// Creates a [PathItemObjectV2] with the given parameters.
-  PathItemObjectV2({this.ref, this.parameters, this.operations});
+  PathItemObjectV2({
+    super.ref, super.parameters, required super.operations
+  });
 
   /// Creates a [PathItemObjectV2] from a map.
   factory PathItemObjectV2.fromMap(Map map) {
@@ -375,14 +366,14 @@ class PathItemObjectV2 extends OpenApiObject<Map<String, dynamic>> {
       if (ref != null) r'$ref': ref,
       if (parameters != null && parameters!.isNotEmpty)
         'parameters': parameters!.map((p) => p.toMap()),
-      if (operations != null && operations!.isNotEmpty)
-        ...operations!.map((key, value) => MapEntry(key, value.toMap())),
+      if (operations.isNotEmpty)
+        ...operations.map((key, value) => MapEntry(key, value.toMap())),
     };
   }
 }
 
 /// Operation object representing a single API operation on a path.
-class OperationObjectV2 extends OpenApiObject<Map<String, dynamic>> {
+class OperationObjectV2 extends OpenApiOperation<Map<String, dynamic>> {
   /// A list of tags for API documentation control.
   final List<String>? tags;
 
@@ -486,7 +477,7 @@ class OperationObjectV2 extends OpenApiObject<Map<String, dynamic>> {
 }
 
 /// Parameter object representing a single operation parameter.
-class ParameterObjectV2 extends OpenApiObject<Map<String, dynamic>> {
+class ParameterObjectV2 extends OpenApiParameter<Map<String, dynamic>> {
   /// The name of the parameter.
   final String name;
 
@@ -591,18 +582,18 @@ class TagObjectV2 {
 }
 
 /// Response object representing a single response from an API operation.
-class ResponseObjectV2 {
+class ResponseObjectV2 extends OpenApiObject<Map<String, dynamic>> {
   /// A short description of the response.
-  final String description;
+  String description;
 
   /// The HTTP status code of the response.
-  final Map<String, HeaderObjectV2>? headers;
+  Map<String, HeaderObjectV2>? headers;
 
   /// The schema defining the type used for the response body.
-  final Object? schema;
+  Object? schema;
 
   /// Examples of the response body.
-  final Map<String, dynamic>? examples;
+  Map<String, dynamic>? examples;
 
   /// Creates a [ResponseObjectV2] with the given parameters.
   ResponseObjectV2({
@@ -641,7 +632,7 @@ class ResponseObjectV2 {
     );
   }
 
-  /// Converts the [ResponseObjectV2] to a map.
+  @override
   Map<String, dynamic> toMap() {
     return {
       'description': description,
@@ -665,7 +656,6 @@ class HeaderObjectV2 extends ItemsObjectV2 {
   HeaderObjectV2({
     this.description,
     required super.type,
-    super.format,
     super.items,
     super.collectionFormat,
     super.defaultValue,
@@ -689,8 +679,7 @@ class HeaderObjectV2 extends ItemsObjectV2 {
     return HeaderObjectV2(
       defaultValue: map['default'],
       description: map['description'],
-      type: map['type'],
-      format: map['format'],
+      type: OpenApiType.custom(map['type'], map['format']),
     );
   }
 
@@ -698,8 +687,7 @@ class HeaderObjectV2 extends ItemsObjectV2 {
   Map<String, dynamic> toMap() {
     return {
       if (description != null) 'description': description,
-      'type': type,
-      if (format != null) 'format': format,
+      ...type.toMap(),
       if (items != null)
         'items': items is ItemsObjectV2
             ? (items as ItemsObjectV2).toMap()
@@ -749,19 +737,11 @@ class SchemaObjectV2 extends JsonSchema<Object> {
 
   /// Creates a [SchemaObjectV2] with the given parameters.
   SchemaObjectV2({
-    this.discriminator,
-    this.readOnly,
-    this.xml,
-    this.externalDocs,
-    this.example,
-    this.defaultValue,
-    this.properties,
-    super.items,
-    super.id,
-    super.schema,
     super.title,
     super.description,
+    super.type,
     super.multipleOf,
+    this.defaultValue,
     super.maximum,
     super.exclusiveMaximum,
     super.minimum,
@@ -769,25 +749,32 @@ class SchemaObjectV2 extends JsonSchema<Object> {
     super.maxLength,
     super.minLength,
     super.pattern,
-    super.additionalItems,
+    super.additionalProperties,
+    super.hasAdditionalProperties,
     super.maxItems,
     super.minItems,
     super.uniqueItems,
     super.maxProperties,
-    super.format,
     super.minProperties,
     super.required,
-    super.additionalProperties,
-    super.hasAdditionalProperties,
-    super.definitions,
-    super.patternProperties,
-    super.dependencies,
     super.enumValues,
-    super.type,
+    this.properties,
     super.allOf,
     super.anyOf,
     super.oneOf,
     super.not,
+    this.discriminator,
+    this.readOnly,
+    this.xml,
+    this.externalDocs,
+    this.example,
+    super.items,
+    super.id,
+    super.schema,
+    super.additionalItems,
+    super.definitions,
+    super.patternProperties,
+    super.dependencies,
     super.ref,
   }) {
     if (items != null && items is! ItemsObjectV2 && items is! ReferenceObject) {
@@ -818,7 +805,6 @@ class SchemaObjectV2 extends JsonSchema<Object> {
                 ? ReferenceObject(map['items'][r'$ref'])
                 : ItemsObjectV2.fromMap(map['items']))
           : null,
-      format: map['format'],
       maxItems: map['maxItems'],
       minItems: map['minItems'],
       uniqueItems: map['uniqueItems'],
@@ -844,7 +830,9 @@ class SchemaObjectV2 extends JsonSchema<Object> {
               : SchemaObjectV2.fromMap(entry.value),
       },
       enumValues: map['enum'] != null ? List<Object>.from(map['enum']) : null,
-      type: map['type'],
+      type: map['type'] != null
+          ? OpenApiType.custom(map['type'], map['format'])
+          : null,
       allOf: map['allOf'] != null
           ? List<SchemaObjectV2>.from(
               map['allOf'].map((s) => SchemaObjectV2.fromMap(s)),
@@ -896,10 +884,7 @@ class SchemaObjectV2 extends JsonSchema<Object> {
 /// Items object representing the type of items in an array.
 class ItemsObjectV2 extends OpenApiObject<Map<String, dynamic>> {
   /// The type of the items (e.g., "string", "number", "integer", "boolean", "array").
-  final String type;
-
-  /// The extending format for the item type (e.g., "int32", "int64", "float", "double", "byte", "binary", "date", "date-time", "password").
-  final String? format;
+  final OpenApiType type;
 
   /// The schema defining the type of items in the array.
   final Object? items;
@@ -952,7 +937,6 @@ class ItemsObjectV2 extends OpenApiObject<Map<String, dynamic>> {
   /// Creates an [ItemsObjectV2] with the given parameters.
   ItemsObjectV2({
     required this.type,
-    this.format,
     this.items,
     this.collectionFormat,
     this.defaultValue,
@@ -980,8 +964,7 @@ class ItemsObjectV2 extends OpenApiObject<Map<String, dynamic>> {
   /// Creates an [ItemsObjectV2] from a map.
   factory ItemsObjectV2.fromMap(Map value) {
     return ItemsObjectV2(
-      type: value['type'],
-      format: value['format'],
+      type: OpenApiType.custom(value['type'], value['format']),
       items: value['items'] != null
           ? (value['items'] is Map
                 ? (value['items'][r'$ref'] != null
@@ -1012,8 +995,7 @@ class ItemsObjectV2 extends OpenApiObject<Map<String, dynamic>> {
   @override
   Map<String, dynamic> toMap() {
     return {
-      'type': type,
-      if (format != null) 'format': format,
+      ...type.toMap(),
       if (items != null)
         'items': items is ItemsObjectV2
             ? (items as ItemsObjectV2).toMap()
@@ -1118,224 +1100,6 @@ class XmlObjectV2 extends OpenApiObject<Map<String, dynamic>> {
       if (attribute != null) 'attribute': attribute,
       if (wrapped != null) 'wrapped': wrapped,
       ...super.toMap(),
-    };
-  }
-}
-
-/// JSON Schema object representing a JSON schema definition.
-class JsonSchema<T> extends OpenApiObject<Map<String, dynamic>> {
-  /// The identifier for the schema.
-  final String? id;
-
-  /// The schema version.
-  final String? schema;
-
-  /// The title of the schema.
-  final String? title;
-
-  /// The description of the schema.
-  final String? description;
-
-  /// A number that the value must be a multiple of.
-  final num? multipleOf;
-
-  /// The maximum value of the number.
-  final num? maximum;
-
-  /// Indicates whether the maximum value is exclusive.
-  final bool? exclusiveMaximum;
-
-  /// The minimum value of the number.
-  final num? minimum;
-
-  /// Indicates whether the minimum value is exclusive.
-  final bool? exclusiveMinimum;
-
-  /// The maximum length of the string.
-  final int? maxLength;
-
-  /// The minimum length of the string.
-  final int? minLength;
-
-  /// A regular expression pattern that the string must match.
-  final String? pattern;
-
-  /// Indicates whether additional items are allowed in an array.
-  final bool? additionalItems;
-
-  /// The schema defining the type of items in an array.
-  final T? items;
-
-  /// The maximum number of items in an array.
-  final int? maxItems;
-
-  /// The minimum number of items in an array.
-  final int? minItems;
-
-  /// Indicates whether the items in an array must be unique.
-  final bool? uniqueItems;
-
-  /// The maximum number of properties in an object.
-  final int? maxProperties;
-
-  /// The minimum number of properties in an object.
-  final int? minProperties;
-
-  /// A list of required properties in an object.
-  final List<String>? required;
-
-  /// A map of additional properties in an object.
-  final Map<String, dynamic>? additionalProperties;
-
-  /// Indicates whether additional properties are allowed in an object.
-  final bool hasAdditionalProperties;
-
-  /// A map of schema definitions.
-  final Map<String, JsonSchema>? definitions;
-
-  /// A map of property schemas.
-  final Map<String, JsonSchema>? properties;
-
-  /// A map of pattern property schemas.
-  final Map<String, JsonSchema>? patternProperties;
-
-  /// A map of dependencies for properties.
-  final Map<String, dynamic>? dependencies;
-
-  /// An enumeration of possible values.
-  final List<dynamic>? enumValues;
-
-  /// The type of the schema (e.g., "string", "number", "integer", "boolean", "array", "object").
-  final dynamic type;
-
-  /// A list of schemas that must all be valid.
-  final List<JsonSchema>? allOf;
-
-  /// A list of schemas where at least one must be valid.
-  final List<JsonSchema>? anyOf;
-
-  /// A list of schemas where exactly one must be valid.
-  final List<JsonSchema>? oneOf;
-
-  /// A schema that must not be valid.
-  final String? format;
-
-  /// A schema that must not be valid.
-  final JsonSchema? not;
-
-  /// A reference to an external definition of the schema.
-  final String? ref;
-
-  /// Creates a [JsonSchema] with the given parameters.
-  JsonSchema({
-    this.id,
-    this.schema,
-    this.title,
-    this.description,
-    this.multipleOf,
-    this.maximum,
-    this.exclusiveMaximum,
-    this.minimum,
-    this.exclusiveMinimum,
-    this.maxLength,
-    this.minLength,
-    this.pattern,
-    this.additionalItems,
-    this.items,
-    this.maxItems,
-    this.minItems,
-    this.uniqueItems,
-    this.maxProperties,
-    this.minProperties,
-    this.required,
-    this.additionalProperties,
-    this.hasAdditionalProperties = false,
-    this.definitions,
-    this.format,
-    this.properties,
-    this.patternProperties,
-    this.dependencies,
-    this.enumValues,
-    this.type,
-    this.allOf,
-    this.anyOf,
-    this.oneOf,
-    this.not,
-    this.ref,
-  }) {
-    if (type != null && type is! String && type is! List<String>) {
-      throw ArgumentError('Type must be a string or a list of strings');
-    }
-    if (dependencies != null) {
-      for (final entry in dependencies!.entries) {
-        if (entry.value is! JsonSchema && entry.value is! List<String>) {
-          throw ArgumentError(
-            'Dependencies must be a JsonSchema or a list of strings',
-          );
-        }
-      }
-    }
-  }
-
-  @override
-  Map<String, dynamic> toMap() {
-    final dependenciesList = <String, dynamic>{};
-    if (dependencies != null && dependencies!.isNotEmpty) {
-      for (final entry in dependencies!.entries) {
-        if (entry.value is JsonSchema) {
-          dependenciesList[entry.key] = (entry.value as JsonSchema).toMap();
-        } else if (entry.value is List<String>) {
-          dependenciesList[entry.key] = entry.value;
-        }
-      }
-    }
-    return {
-      if (type != null) 'type': type,
-      if (format != null) 'format': format,
-      if (title != null) 'title': title,
-      if (description != null) 'description': description,
-      if (multipleOf != null) 'multipleOf': multipleOf,
-      if (maximum != null) 'maximum': maximum,
-      if (exclusiveMaximum != null) 'exclusiveMaximum': exclusiveMaximum,
-      if (minimum != null) 'minimum': minimum,
-      if (exclusiveMinimum != null) 'exclusiveMinimum': exclusiveMinimum,
-      if (maxLength != null) 'maxLength': maxLength,
-      if (minLength != null) 'minLength': minLength,
-      if (pattern != null) 'pattern': pattern,
-      if (maxItems != null) 'maxItems': maxItems,
-      if (minItems != null) 'minItems': minItems,
-      if (uniqueItems != null) 'uniqueItems': uniqueItems,
-      if (maxProperties != null) 'maxProperties': maxProperties,
-      if (minProperties != null) 'minProperties': minProperties,
-      if (required != null) 'required': required,
-      if (additionalProperties != null && hasAdditionalProperties)
-        'additionalProperties': additionalProperties,
-      if (definitions != null && definitions!.isNotEmpty)
-        'definitions': definitions!.map(
-          (key, value) => MapEntry(key, value.toMap()),
-        ),
-      if (properties != null && properties!.isNotEmpty)
-        'properties': properties!.map(
-          (key, value) => MapEntry(key, value.toMap()),
-        ),
-      if (patternProperties != null && patternProperties!.isNotEmpty)
-        'patternProperties': patternProperties!.map(
-          (key, value) => MapEntry(key, value.toMap()),
-        ),
-      if (dependencies != null && dependencies!.isNotEmpty)
-        'dependencies': dependenciesList,
-      if (enumValues != null) 'enum': enumValues,
-      if (items != null)
-        'items': items is OpenApiObject
-            ? (items as OpenApiObject).toMap()
-            : items,
-      if (allOf != null) 'allOf': allOf!.map((e) => e.toMap()).toList(),
-      if (anyOf != null) 'anyOf': anyOf!.map((e) => e.toMap()).toList(),
-      if (oneOf != null) 'oneOf': oneOf!.map((e) => e.toMap()).toList(),
-      if (not != null) 'not': not!.toMap(),
-      if (ref != null) r'$ref': ref,
-      if (id != null) 'id': id,
-      if (schema != null) r'$schema': schema,
     };
   }
 }

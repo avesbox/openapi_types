@@ -206,84 +206,7 @@ class ParameterBaseObjectV3 extends OpenApiParameter<Map<String, dynamic>> {
 
 /// Schema object representing a schema in the OpenAPI specification.
 class SchemaObjectV3<E extends Object>
-    extends OpenApiObject<Map<String, dynamic>> {
-  /// The title of the schema.
-  final String? title;
-
-  /// The description of the schema.
-  final String? description;
-
-  /// The format of the schema.
-  final String? format;
-
-  /// The type of the schema.
-  final String? type;
-
-  /// The default value of the schema.
-  final Object? defaultValue;
-
-  /// A number that the schema value must be a multiple of.
-  final num? multipleOf;
-
-  /// The maximum value of the schema.
-  final num? maximum;
-
-  /// Whether the maximum value is exclusive.
-  final bool? exclusiveMaximum;
-
-  /// The minimum value of the schema.
-  final num? minimum;
-
-  /// Whether the minimum value is exclusive.
-  final bool? exclusiveMinimum;
-
-  /// The maximum length of the schema value.
-  final int? maxLength;
-
-  /// The minimum length of the schema value.
-  final int? minLength;
-
-  /// A regular expression that the schema value must match.
-  final String? pattern;
-
-  /// Whether additional properties are allowed in the schema.
-  final bool? additionalProperties;
-
-  /// The maximum number of items in an array schema.
-  final int? maxItems;
-
-  /// The minimum number of items in an array schema.
-  final int? minItems;
-
-  /// Whether the items in an array schema must be unique.
-  final bool? uniqueItems;
-
-  /// The maximum number of properties in an object schema.
-  final int? maxProperties;
-
-  /// The minimum number of properties in an object schema.
-  final int? minProperties;
-
-  /// A list of required properties in an object schema.
-  final List<String>? required;
-
-  /// An enumeration of possible values for the schema.
-  final List<Object>? enumValues;
-
-  /// A map of property names to their corresponding schema objects.
-  final Map<String, Object>? properties;
-
-  /// A list of schemas that must all be valid for the schema to be valid.
-  final List<Object>? allOf;
-
-  /// A list of schemas where at least one must be valid for the schema to be valid.
-  final List<Object>? oneOf;
-
-  /// A list of schemas where at least one must be valid for the schema to be valid.
-  final List<Object>? anyOf;
-
-  /// A schema that must not be valid for the schema to be valid.
-  final Object? not;
+    extends JsonSchema<E> {
 
   /// Whether the schema allows null values.
   final bool? nullable;
@@ -309,37 +232,33 @@ class SchemaObjectV3<E extends Object>
   /// Whether the schema is deprecated.
   final bool? deprecated;
 
-  /// The items schema for array types.
-  final OpenApiObject? items;
-
   /// Creates a [SchemaObjectV3] with the given parameters.
   SchemaObjectV3({
-    this.title,
-    this.description,
-    this.format,
-    this.type,
-    this.defaultValue,
-    this.multipleOf,
-    this.maximum,
-    this.exclusiveMaximum,
-    this.minimum,
-    this.exclusiveMinimum,
-    this.maxLength,
-    this.minLength,
-    this.pattern,
-    this.additionalProperties,
-    this.maxItems,
-    this.minItems,
-    this.uniqueItems,
-    this.maxProperties,
-    this.minProperties,
-    this.required,
-    this.enumValues,
-    this.properties,
-    this.allOf,
-    this.oneOf,
-    this.anyOf,
-    this.not,
+    super.title,
+    super.description,
+    super.type,
+    super.defaultValue,
+    super.multipleOf,
+    super.maximum,
+    super.exclusiveMaximum,
+    super.minimum,
+    super.exclusiveMinimum,
+    super.maxLength,
+    super.minLength,
+    super.pattern,
+    super.additionalProperties,
+    super.maxItems,
+    super.minItems,
+    super.uniqueItems,
+    super.maxProperties,
+    super.minProperties,
+    super.required,
+    super.enumValues,
+    super.properties,
+    super.allOf,
+    super.oneOf,
+    super.anyOf,
+    super.not,
     this.nullable,
     this.discriminator,
     this.readOnly,
@@ -347,13 +266,15 @@ class SchemaObjectV3<E extends Object>
     this.xml,
     this.externalDocs,
     this.example,
-    this.items,
+    super.items,
     this.deprecated,
   }) {
     for (final property
-        in properties?.entries ?? <MapEntry<String, Object>>[]) {
-      if (property.value is! SchemaObjectV3 &&
-          property.value is! ReferenceObject) {
+        in (properties?.entries ?? <MapEntry<String, JsonSchema>>[])) {
+      if (
+        property.value is! SchemaObjectV3 &&
+        property.value is! ReferenceObject
+      ) {
         throw ArgumentError(
           'Property ${property.key} must be of type SchemaObjectV3 or ReferenceObject',
         );
@@ -385,7 +306,7 @@ class SchemaObjectV3<E extends Object>
         'Not schema must be of type int, double, String, bool, List, Map, num or ReferenceObject',
       );
     }
-    if (type == 'array' && (items == null)) {
+    if (type == OpenApiType.array() && (items == null)) {
       throw ArgumentError(
         'Items must be provided and non-empty when type is array',
       );
@@ -397,8 +318,9 @@ class SchemaObjectV3<E extends Object>
     return SchemaObjectV3(
       title: data['title'],
       description: data['description'],
-      format: data['format'],
-      type: data['type'],
+      type: data['type'] != null
+          ? OpenApiType.custom(data['type'], data['format'])
+          : null,
       defaultValue: data['default'],
       multipleOf: data['multipleOf'],
       maximum: data['maximum'],
@@ -433,7 +355,7 @@ class SchemaObjectV3<E extends Object>
             )
           : null,
       allOf: data['allOf'] != null
-          ? List<Object>.from(
+          ? List<JsonSchema>.from(
               data['allOf'].map(
                 (item) => item is Map
                     ? SchemaObjectV3.fromMap(item)
@@ -446,7 +368,7 @@ class SchemaObjectV3<E extends Object>
             )
           : null,
       oneOf: data['oneOf'] != null
-          ? List<Object>.from(
+          ? List<JsonSchema>.from(
               data['oneOf'].map(
                 (item) => item is Map
                     ? SchemaObjectV3.fromMap(item)
@@ -459,7 +381,7 @@ class SchemaObjectV3<E extends Object>
             )
           : null,
       anyOf: data['anyOf'] != null
-          ? List<Object>.from(
+          ? List<JsonSchema>.from(
               data['anyOf'].map(
                 (item) => item is Map
                     ? SchemaObjectV3.fromMap(item)
@@ -520,9 +442,8 @@ class SchemaObjectV3<E extends Object>
   Map<String, dynamic> toMap() {
     return {
       if (title != null) 'title': title,
-      if (type != null) 'type': type,
+      if (type != null) ...type!.toMap(),
       if (description != null) 'description': description,
-      if (format != null) 'format': format,
       if (defaultValue != null) 'default': defaultValue,
       if (multipleOf != null) 'multipleOf': multipleOf,
       if (maximum != null) 'maximum': maximum,
@@ -541,7 +462,7 @@ class SchemaObjectV3<E extends Object>
       if (minProperties != null) 'minProperties': minProperties,
       if (required != null) 'required': required,
       if (enumValues != null) 'enum': enumValues,
-      if (type == 'array' && items != null)
+      if (type?.type == 'array' && items != null)
         'items': items is ReferenceObject
             ? (items as ReferenceObject).toMap()
             : items is SchemaObjectV3
@@ -819,6 +740,11 @@ class MediaTypeObjectV3 {
           'Example ${example.key} must be of type ExampleObjectV3 or ReferenceObject',
         );
       }
+      if( schema != null && schema is! SchemaObjectV3 && schema is! ReferenceObject) {
+        throw ArgumentError(
+          'Schema must be of type SchemaObjectV3 or ReferenceObject',
+        );
+      }
     }
   }
 
@@ -1038,7 +964,7 @@ class LinkObjectV3 extends OpenApiObject<Map<String, dynamic>> {
 /// Responses object representing the responses of an operation.
 class ResponsesV3<T> {
   /// A map of response codes to response objects.
-  final Map<T, OpenApiObject> responses;
+  Map<T, OpenApiObject> responses;
 
   /// Creates a [ResponsesV3] with the given responses.
   ResponsesV3(this.responses) {
@@ -1058,6 +984,20 @@ class ResponsesV3<T> {
     }
   }
 
+  operator [](T key) => responses[key];
+
+  operator []=(T key, OpenApiObject value) {
+    if (value is! ResponseObjectV3 && value is! ReferenceObject) {
+      throw ArgumentError(
+        'Response $key must be of type ResponseObjectV3 or ReferenceObject',
+      );
+    }
+    if (T == int && (key as int < 100 || key as int > 599)) {
+      throw ArgumentError('Response code $key must be between 100 and 599');
+    }
+    responses[key] = value;
+  }
+
   /// Converts the [ResponsesV3] to a map.
   Map<String, dynamic> toMap() {
     return {
@@ -1074,16 +1014,16 @@ class ResponsesV3<T> {
 /// Response object representing a response in an operation.
 class ResponseObjectV3 extends OpenApiObject<Map<String, dynamic>> {
   /// A description of the response.
-  final String? description;
+  String? description;
 
   /// A map of media types to media type objects.
-  final Map<String, MediaTypeObjectV3>? content;
+  Map<String, MediaTypeObjectV3>? content;
 
   /// A map of headers for the response.
-  final Map<String, OpenApiObject>? headers;
+  Map<String, OpenApiObject>? headers;
 
   /// A map of links for the response.
-  final Map<String, OpenApiObject>? links;
+  Map<String, OpenApiObject>? links;
 
   /// Creates a [ResponseObjectV3] with the given parameters.
   ResponseObjectV3({this.description, this.content, this.headers, this.links}) {
@@ -2061,9 +2001,7 @@ class TagObjectV3 extends OpenApiObject<Map<String, dynamic>> {
 }
 
 /// Path item object representing a path in the OpenAPI document.
-class PathItemObjectV3 extends OpenApiObject<Map<String, dynamic>> {
-  /// The reference to the path item.
-  final String? ref;
+class PathItemObjectV3 extends OpenApiPathItem<Map<String, dynamic>, OpenApiObject, OperationObjectV3> {
 
   /// A short summary of the path item.
   final String? summary;
@@ -2074,20 +2012,14 @@ class PathItemObjectV3 extends OpenApiObject<Map<String, dynamic>> {
   /// Additional external documentation for the path item.
   final ExternalDocumentationObjectV3? externalDocs;
 
-  /// A map of HTTP methods to operation objects.
-  final Map<String, OperationObjectV3> operations;
-
-  /// A list of parameters for all operations in the path item.
-  final List<OpenApiObject>? parameters;
-
   /// Creates a [PathItemObjectV3] with the given parameters.
   PathItemObjectV3({
-    required this.operations,
-    this.ref,
+    required super.operations,
+    super.ref,
     this.summary,
     this.description,
     this.externalDocs,
-    this.parameters,
+    super.parameters,
     super.extensions,
   }) {
     for (final operation in operations.entries) {
@@ -2170,9 +2102,6 @@ class DocumentV3 extends OpenAPIDocument<Map<String, dynamic>> {
   /// The OpenAPI version.
   final String openapi;
 
-  /// The metadata about the API.
-  final InfoObject info;
-
   /// A list of server objects.
   final List<ServerObjectV3>? servers;
 
@@ -2193,7 +2122,7 @@ class DocumentV3 extends OpenAPIDocument<Map<String, dynamic>> {
 
   /// Creates a [DocumentV3] with the given parameters.
   DocumentV3({
-    required this.info,
+    required super.info,
     required this.paths,
     this.servers,
     this.openapi = '3.0.0',

@@ -210,7 +210,7 @@ class DocumentV31 extends OpenAPIDocument<Map<String, dynamic>> {
   /// Creates a [DocumentV31] with the given parameters.
   DocumentV31({
     this.openapi = '3.1.0',
-    required this.info,
+    required super.info,
     this.jsonSchemaDialect,
     this.servers,
     PathsWebhooksComponentsV31<Map<String, dynamic>>? structure,
@@ -224,9 +224,6 @@ class DocumentV31 extends OpenAPIDocument<Map<String, dynamic>> {
 
   /// The OpenAPI version string.
   final String openapi;
-
-  /// The metadata about the API.
-  final InfoObject info;
 
   /// The default JSON Schema dialect.
   final String? jsonSchemaDialect;
@@ -331,7 +328,6 @@ class DocumentV31 extends OpenAPIDocument<Map<String, dynamic>> {
   Map<String, dynamic> toMap() {
     return {
       'openapi': openapi,
-      'info': info.toMap(),
       if (jsonSchemaDialect != null) 'jsonSchemaDialect': jsonSchemaDialect,
       if (servers != null)
         'servers': servers!.map((server) => server.toMap()).toList(),
@@ -347,7 +343,7 @@ class DocumentV31 extends OpenAPIDocument<Map<String, dynamic>> {
       if (security != null) 'security': security,
       if (tags != null) 'tags': tags!.map((tag) => tag.toMap()).toList(),
       if (externalDocs != null) 'externalDocs': externalDocs!.toMap(),
-      if (extensions != null) ...extensions!,
+      ...super.toMap()
     };
   }
 }
@@ -670,7 +666,6 @@ class SchemaObjectV31 extends SchemaObjectV3 {
 
   /// Creates a [SchemaObjectV31] with the given parameters.
   SchemaObjectV31({
-    super.format,
     super.title,
     super.description,
     super.defaultValue,
