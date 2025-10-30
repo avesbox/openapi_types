@@ -205,9 +205,7 @@ class ParameterBaseObjectV3 extends OpenApiParameter<Map<String, dynamic>> {
 }
 
 /// Schema object representing a schema in the OpenAPI specification.
-class SchemaObjectV3<E extends Object>
-    extends JsonSchema<E> {
-
+class SchemaObjectV3<E extends Object> extends JsonSchema<E> {
   /// Whether the schema allows null values.
   final bool? nullable;
 
@@ -271,10 +269,8 @@ class SchemaObjectV3<E extends Object>
   }) {
     for (final property
         in (properties?.entries ?? <MapEntry<String, JsonSchema>>[])) {
-      if (
-        property.value is! SchemaObjectV3 &&
-        property.value is! ReferenceObject
-      ) {
+      if (property.value is! SchemaObjectV3 &&
+          property.value is! ReferenceObject) {
         throw ArgumentError(
           'Property ${property.key} must be of type SchemaObjectV3 or ReferenceObject',
         );
@@ -740,7 +736,9 @@ class MediaTypeObjectV3 {
           'Example ${example.key} must be of type ExampleObjectV3 or ReferenceObject',
         );
       }
-      if( schema != null && schema is! SchemaObjectV3 && schema is! ReferenceObject) {
+      if (schema != null &&
+          schema is! SchemaObjectV3 &&
+          schema is! ReferenceObject) {
         throw ArgumentError(
           'Schema must be of type SchemaObjectV3 or ReferenceObject',
         );
@@ -2001,8 +1999,13 @@ class TagObjectV3 extends OpenApiObject<Map<String, dynamic>> {
 }
 
 /// Path item object representing a path in the OpenAPI document.
-class PathItemObjectV3 extends OpenApiPathItem<Map<String, dynamic>, OpenApiObject, OperationObjectV3> {
-
+class PathItemObjectV3
+    extends
+        OpenApiPathItem<
+          Map<String, dynamic>,
+          OpenApiObject,
+          OperationObjectV3
+        > {
   /// A short summary of the path item.
   final String? summary;
 

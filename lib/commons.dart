@@ -148,7 +148,6 @@ enum OpenApiVersion {
   v3_1,
 }
 
-
 /// JSON Schema object representing a JSON schema definition.
 class JsonSchema<T> extends OpenApiObject<Map<String, dynamic>> {
   /// The identifier for the schema.
@@ -252,7 +251,6 @@ class JsonSchema<T> extends OpenApiObject<Map<String, dynamic>> {
 
   /// The default value for the schema.
   final Object? defaultValue;
-
 
   /// Creates a [JsonSchema] with the given parameters.
   JsonSchema({

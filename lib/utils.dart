@@ -8,7 +8,8 @@ extension IsOpenApiType on Object? {
   bool get isNotOpenApiV3Schema {
     return this != null &&
         (runtimeType != ReferenceObject &&
-            (!_openApiV3SchemaTypes.contains(runtimeType) && !_openApiV3SchemaTypes.contains(this)) &&
+            (!_openApiV3SchemaTypes.contains(runtimeType) &&
+                !_openApiV3SchemaTypes.contains(this)) &&
             (this is! List && this is! Map));
   }
 }

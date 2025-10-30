@@ -343,7 +343,7 @@ class DocumentV31 extends OpenAPIDocument<Map<String, dynamic>> {
       if (security != null) 'security': security,
       if (tags != null) 'tags': tags!.map((tag) => tag.toMap()).toList(),
       if (externalDocs != null) 'externalDocs': externalDocs!.toMap(),
-      ...super.toMap()
+      ...super.toMap(),
     };
   }
 }

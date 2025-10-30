@@ -138,7 +138,7 @@ class DocumentV2<T extends Map<String, dynamic>>
       if (tags != null && tags!.isNotEmpty)
         'tags': tags!.map((tag) => tag.toMap()).toList(),
       if (externalDocs != null) 'externalDocs': externalDocs!.toMap(),
-      ...super.toMap()
+      ...super.toMap(),
     };
   }
 }
@@ -322,12 +322,15 @@ class SecuritySchemeOAuth2AccessCodeV2 extends SecuritySchemeOAuth2V2 {
 }
 
 /// Path item object representing the operations available on a single path.
-class PathItemObjectV2 extends OpenApiPathItem<Map<String, dynamic>, ParameterObjectV2, OperationObjectV2> {
-
+class PathItemObjectV2
+    extends
+        OpenApiPathItem<
+          Map<String, dynamic>,
+          ParameterObjectV2,
+          OperationObjectV2
+        > {
   /// Creates a [PathItemObjectV2] with the given parameters.
-  PathItemObjectV2({
-    super.ref, super.parameters, required super.operations
-  });
+  PathItemObjectV2({super.ref, super.parameters, required super.operations});
 
   /// Creates a [PathItemObjectV2] from a map.
   factory PathItemObjectV2.fromMap(Map map) {

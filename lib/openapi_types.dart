@@ -32,10 +32,7 @@ abstract class OpenAPIDocument<T extends Map<String, dynamic>> {
 
   /// Converts the [OpenAPIDocument] to a map.
   Map<String, dynamic> toMap() {
-    return {
-      if (extensions != null) ...extensions!,
-      'info': info.toMap(),
-    };
+    return {if (extensions != null) ...extensions!, 'info': info.toMap()};
   }
 }
 
@@ -66,8 +63,12 @@ abstract class OpenApiParameter<T extends Map<String, dynamic>>
 }
 
 /// Base class for OpenAPI path items (e.g., [PathItemObjectV2], [PathItemObjectV3], [PathItemObjectV31]).
-abstract class OpenApiPathItem<T extends Map<String, dynamic>, P extends OpenApiObject, O extends OpenApiOperation> extends OpenApiObject<T> {
-
+abstract class OpenApiPathItem<
+  T extends Map<String, dynamic>,
+  P extends OpenApiObject,
+  O extends OpenApiOperation
+>
+    extends OpenApiObject<T> {
   /// A reference to an external definition of the path item.
   final String? ref;
 
@@ -84,13 +85,10 @@ abstract class OpenApiPathItem<T extends Map<String, dynamic>, P extends OpenApi
     this.parameters,
     super.extensions,
   });
-  
-
 }
 
 /// Base class for OpenAPI types (e.g., [OpenApiType]).
 class OpenApiType {
-
   /// The [type] property contains the type of the OpenAPI type.
   final String type;
 
@@ -102,39 +100,49 @@ class OpenApiType {
 
   /// Converts the [OpenApiType] to a map.
   Map<String, dynamic> toMap() {
-    return {
-      'type': type,
-      if (format != null) 'format': format,
-    };
+    return {'type': type, if (format != null) 'format': format};
   }
 
   /// Creates a custom OpenAPI type with the given [type] and optional [format].
-  factory OpenApiType.custom(String type, [String? format]) => OpenApiType._(type, format);
+  factory OpenApiType.custom(String type, [String? format]) =>
+      OpenApiType._(type, format);
 
   /// int32 type
   factory OpenApiType.int32() => const OpenApiType._('integer', 'int32');
+
   /// int64 type
   factory OpenApiType.int64() => const OpenApiType._('integer', 'int64');
+
   /// float type
   factory OpenApiType.float() => const OpenApiType._('number', 'float');
+
   /// double type
   factory OpenApiType.double() => const OpenApiType._('number', 'double');
+
   /// string type
   factory OpenApiType.string() => const OpenApiType._('string');
+
   /// byte type
   factory OpenApiType.byte() => const OpenApiType._('string', 'byte');
+
   /// binary type
   factory OpenApiType.binary() => const OpenApiType._('string', 'binary');
+
   /// boolean type
   factory OpenApiType.boolean() => const OpenApiType._('boolean');
+
   /// date type
   factory OpenApiType.date() => const OpenApiType._('string', 'date');
+
   /// date-time type
   factory OpenApiType.dateTime() => const OpenApiType._('string', 'date-time');
+
   /// password type
   factory OpenApiType.password() => const OpenApiType._('string', 'password');
+
   /// object type
   factory OpenApiType.object() => const OpenApiType._('object');
+
   /// array type
   factory OpenApiType.array() => const OpenApiType._('array');
 
