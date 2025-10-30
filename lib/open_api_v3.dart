@@ -163,9 +163,9 @@ class ParameterBaseObjectV3 extends OpenApiParameter<Map<String, dynamic>> {
         );
       }
     }
-    if (schema.isNotOpenApiV3Schema) {
+    if (schema.isNotOpenApiV3Schema && schema is! SchemaObjectV3) {
       throw ArgumentError(
-        'Schema must be of type int, double, String, bool, List, Map, num or ReferenceV3',
+        'Schema must be of type int, double, String, bool, List, Map, num, ReferenceV3 or SchemaObjectV3',
       );
     }
   }
