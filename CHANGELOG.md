@@ -1,5 +1,9 @@
 # Changelog
 
+## 2.0.1
+
+- fix: add missing types in DocumentV2
+
 ## 2.0.0
 
 - fix!: improved interoperability between OpenAPI types.
