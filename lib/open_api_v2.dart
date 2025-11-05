@@ -278,7 +278,6 @@ sealed class SecuritySchemeOAuth2V2 extends SecuritySchemeObjectV2 {
         throw ArgumentError('Unsupported OAuth2 flow type: $flow');
     }
   }
-
 }
 
 /// OAuth2 Implicit flow security scheme.
