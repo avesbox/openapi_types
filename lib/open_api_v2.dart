@@ -105,6 +105,11 @@ class DocumentV2<T extends Map<String, dynamic>>
         for (final entry in (map['parameters'] ?? {}).entries)
           entry.key: ParameterObjectV2.fromMap(entry.value),
       },
+      security: map['security'],
+      securityDefinitions: {
+        for (final entry in (map['securityDefinitions'] ?? {}).entries)
+          entry.key: SecuritySchemeObjectV2.fromMap(entry.value),
+      },
     );
   }
 
@@ -157,6 +162,26 @@ sealed class SecuritySchemeObjectV2 {
   /// Converts the [SecuritySchemeObjectV2] to a map.
   Map<String, dynamic> toMap() {
     return {'type': type, if (description != null) 'description': description};
+  }
+
+  /// Creates a [SecuritySchemeObjectV2] from a map.
+  /// Throws an [ArgumentError] if the type is not recognized.
+  factory SecuritySchemeObjectV2.fromMap(Map map) {
+    final type = map['type'];
+    switch (type) {
+      case 'basic':
+        return SecuritySchemeBasicV2(description: map['description']);
+      case 'apiKey':
+        return SecuritySchemeApiKeyV2(
+          name: map['name'],
+          in_: map['in'],
+          description: map['description'],
+        );
+      case 'oauth':
+        return SecuritySchemeOAuth2V2.fromMap(map);
+      default:
+        throw ArgumentError('Unsupported security scheme type: $type');
+    }
   }
 }
 
@@ -218,6 +243,42 @@ sealed class SecuritySchemeOAuth2V2 extends SecuritySchemeObjectV2 {
       ...super.toMap(),
     };
   }
+
+  /// Creates a [SecuritySchemeOAuth2V2] from a map.
+  /// Throws an [ArgumentError] if the flow is not recognized.
+  factory SecuritySchemeOAuth2V2.fromMap(Map map) {
+    final flow = map['flow'];
+    switch (flow) {
+      case 'implicit':
+        return SecuritySchemeOAuth2ImplicitV2(
+          authorizationUrl: map['authorizationUrl'],
+          scopes: Map<String, String>.from(map['scopes']),
+          description: map['description'],
+        );
+      case 'password':
+        return SecuritySchemeOAuth2PasswordV2(
+          tokenUrl: map['tokenUrl'],
+          scopes: Map<String, String>.from(map['scopes']),
+          description: map['description'],
+        );
+      case 'application':
+        return SecuritySchemeOAuth2ApplicationV2(
+          tokenUrl: map['tokenUrl'],
+          scopes: Map<String, String>.from(map['scopes']),
+          description: map['description'],
+        );
+      case 'accessCode':
+        return SecuritySchemeOAuth2AccessCodeV2(
+          authorizationUrl: map['authorizationUrl'],
+          tokenUrl: map['tokenUrl'],
+          scopes: Map<String, String>.from(map['scopes']),
+          description: map['description'],
+        );
+      default:
+        throw ArgumentError('Unsupported OAuth2 flow type: $flow');
+    }
+  }
+
 }
 
 /// OAuth2 Implicit flow security scheme.
