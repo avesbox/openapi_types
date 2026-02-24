@@ -1,12 +1,9 @@
 import 'package:openapi_types/openapi_types.dart';
 
 /// A simple reference object to be used in various places.
-class ReferenceObject extends OpenApiObject<Map<String, dynamic>> {
-  /// The reference string.
-  final String ref;
-
+class ReferenceObject extends JsonSchema<Map<String, dynamic>> {
   /// Creates a [ReferenceObject] with the given [ref].
-  const ReferenceObject(this.ref);
+  ReferenceObject(String ref) : super(ref: ref);
 
   @override
   Map<String, dynamic> toMap() {

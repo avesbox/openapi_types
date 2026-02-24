@@ -1,5 +1,9 @@
 # Changelog
 
+## 2.0.2
+
+- fix: RefernceObject now is a JsonSchema object, and it has a constructor that takes a String ref as parameter.
+
 ## 2.0.1
 
 - fix: add missing types in DocumentV2
