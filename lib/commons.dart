@@ -9,7 +9,8 @@ class ReferenceObject extends JsonSchema<Map<String, dynamic>> {
   final String? description;
 
   /// Creates a [ReferenceObject] with the given [ref].
-  ReferenceObject(String ref, {this.summary, this.description}) : super(ref: ref);
+  ReferenceObject(String ref, {this.summary, this.description})
+    : super(ref: ref);
 
   /// Creates a [ReferenceObject] from a map.
   factory ReferenceObject.fromMap(Map map) {

@@ -201,9 +201,7 @@ sealed class SecuritySchemeObjectV2
           properties: Map<String, dynamic>.from(map)
             ..removeWhere(
               (key, _) =>
-                  key == 'type' ||
-                  key == 'description' ||
-                  key.startsWith('x-'),
+                  key == 'type' || key == 'description' || key.startsWith('x-'),
             ),
           extensions: extensions,
         );
@@ -407,7 +405,11 @@ class SecuritySchemeOAuth2AccessCodeV2 extends SecuritySchemeOAuth2V2 {
 
   @override
   Map<String, dynamic> toMap() {
-    return {'authorizationUrl': authorizationUrl, 'tokenUrl': tokenUrl, ...super.toMap()};
+    return {
+      'authorizationUrl': authorizationUrl,
+      'tokenUrl': tokenUrl,
+      ...super.toMap(),
+    };
   }
 }
 
@@ -617,9 +619,7 @@ class ParameterObjectV2 extends OpenApiParameter<Map<String, dynamic>> {
       );
     }
     if (items != null && items is! ItemsObjectV2 && items is! ReferenceObject) {
-      throw ArgumentError(
-        'items must be ItemsObjectV2 or ReferenceObject',
-      );
+      throw ArgumentError('items must be ItemsObjectV2 or ReferenceObject');
     }
   }
 
@@ -635,8 +635,8 @@ class ParameterObjectV2 extends OpenApiParameter<Map<String, dynamic>> {
       required: map['required'],
       items: map['items'] != null
           ? (map['items']['\$ref'] != null
-            ? ReferenceObject(map['items']['\$ref'])
-            : ItemsObjectV2.fromMap(map['items']))
+                ? ReferenceObject(map['items']['\$ref'])
+                : ItemsObjectV2.fromMap(map['items']))
           : null,
       schema: map['schema'] != null
           ? (map['schema']['\$ref'] != null
@@ -656,8 +656,8 @@ class ParameterObjectV2 extends OpenApiParameter<Map<String, dynamic>> {
       if (collectionFormat != null) 'collectionFormat': collectionFormat,
       if (items != null)
         'items': items is ItemsObjectV2
-        ? (items as ItemsObjectV2).toMap()
-        : (items as ReferenceObject).toMap(),
+            ? (items as ItemsObjectV2).toMap()
+            : (items as ReferenceObject).toMap(),
       if (description != null) 'description': description,
       if (required != null) 'required': required,
       if (schema != null)

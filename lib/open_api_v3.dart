@@ -209,7 +209,10 @@ class ParameterBaseObjectV3 extends OpenApiParameter<Map<String, dynamic>> {
     }
 
     final entries = (value as Map).entries
-        .map((entry) => MapEntry(entry.key.toString(), _primitiveValue(entry.value)))
+        .map(
+          (entry) =>
+              MapEntry(entry.key.toString(), _primitiveValue(entry.value)),
+        )
         .toList();
 
     switch (effectiveStyle) {
@@ -224,14 +227,18 @@ class ParameterBaseObjectV3 extends OpenApiParameter<Map<String, dynamic>> {
         return '.${entries.expand((entry) => [entry.key, entry.value]).join(',')}';
       case 'matrix':
         if (effectiveExplode) {
-          return entries.map((entry) => ';${entry.key}=${entry.value}').join('');
+          return entries
+              .map((entry) => ';${entry.key}=${entry.value}')
+              .join('');
         }
         return ';$parameterName=${entries.expand((entry) => [entry.key, entry.value]).join(',')}';
       case 'simple':
       case 'form':
       default:
         if (effectiveStyle == 'form' && effectiveExplode) {
-          return entries.map((entry) => '${entry.key}=${entry.value}').join('&');
+          return entries
+              .map((entry) => '${entry.key}=${entry.value}')
+              .join('&');
         }
         return entries.expand((entry) => [entry.key, entry.value]).join(',');
     }
@@ -349,9 +356,7 @@ class SchemaObjectV3<E extends Object> extends JsonSchema<E> {
       }
     }
     if (not != null && not is! JsonSchema && not is! ReferenceObject) {
-      throw ArgumentError(
-        'Not schema must be a JsonSchema or ReferenceObject',
-      );
+      throw ArgumentError('Not schema must be a JsonSchema or ReferenceObject');
     }
     if (type == OpenApiType.array() && (items == null)) {
       throw ArgumentError(
@@ -456,7 +461,7 @@ class SchemaObjectV3<E extends Object> extends JsonSchema<E> {
           ? DiscriminatorObjectV3(
               propertyName: data['discriminator']['propertyName'],
               mapping: data['discriminator']['mapping'] != null
-              ? Map<String, Object?>.from(data['discriminator']['mapping'])
+                  ? Map<String, Object?>.from(data['discriminator']['mapping'])
                   : null,
             )
           : null,
@@ -697,7 +702,9 @@ class ParameterObjectV3 extends ParameterBaseObjectV3 {
                     ? ExampleObjectV3.fromMap(value)
                     : value is String
                     ? ReferenceObject(value)
-                    : throw ArgumentError('Example must be of type Map or String'),
+                    : throw ArgumentError(
+                        'Example must be of type Map or String',
+                      ),
               ),
             )
           : null,
@@ -756,7 +763,9 @@ class HeaderObjectV3 extends ParameterBaseObjectV3 {
                     ? ExampleObjectV3.fromMap(value)
                     : value is String
                     ? ReferenceObject(value)
-                    : throw ArgumentError('Example must be of type Map or String'),
+                    : throw ArgumentError(
+                        'Example must be of type Map or String',
+                      ),
               ),
             )
           : null,
@@ -1385,7 +1394,9 @@ class OperationObjectV3 extends OpenApiOperation<Map<String, dynamic>> {
   /// Creates an [OperationObjectV3] from a map.
   factory OperationObjectV3.fromMap(Map map) {
     if (map['responses'] == null) {
-      throw ArgumentError('OperationObjectV3 requires a non-null responses object');
+      throw ArgumentError(
+        'OperationObjectV3 requires a non-null responses object',
+      );
     }
     return OperationObjectV3(
       tags: map['tags'] != null ? List<String>.from(map['tags']) : null,
@@ -1399,9 +1410,7 @@ class OperationObjectV3 extends OpenApiOperation<Map<String, dynamic>> {
                 ? ResponseObjectV3.fromMap(value)
                 : value is String
                 ? ReferenceObject(value)
-                : throw ArgumentError(
-                    'Response must be of type Map or String',
-                  ),
+                : throw ArgumentError('Response must be of type Map or String'),
           ),
         ),
       ),
@@ -1433,7 +1442,7 @@ class OperationObjectV3 extends OpenApiOperation<Map<String, dynamic>> {
               map['parameters'].map(
                 (item) => item is Map
                     ? item.containsKey('\$ref')
-                      ? ReferenceObject.fromMap(item)
+                          ? ReferenceObject.fromMap(item)
                           : ParameterObjectV3.fromMap(item)
                     : item is String
                     ? ReferenceObject(item)
@@ -1831,14 +1840,16 @@ sealed class SecuritySchemeObjectV3
         if (flowsData.containsKey('clientCredentials')) {
           final clientCredentials =
               flowsData['clientCredentials'] as Map<String, dynamic>;
-          flows['clientCredentials'] =
-              ClientCredentialsOAuthFlowV3.fromMap(clientCredentials);
+          flows['clientCredentials'] = ClientCredentialsOAuthFlowV3.fromMap(
+            clientCredentials,
+          );
         }
         if (flowsData.containsKey('authorizationCode')) {
           final authorizationCode =
               flowsData['authorizationCode'] as Map<String, dynamic>;
-          flows['authorizationCode'] =
-              AuthorizationCodeOAuthFlowV3.fromMap(authorizationCode);
+          flows['authorizationCode'] = AuthorizationCodeOAuthFlowV3.fromMap(
+            authorizationCode,
+          );
         }
         return OAuth2SecuritySchemeV3(
           flows: flows,

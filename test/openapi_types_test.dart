@@ -35,58 +35,61 @@ void main() {
     expect(map['x-team'], 'platform');
     expect(map['x-release'], 3);
   });
-  
-    test('MediaTypeObjectV3 preserves singular example', () {
-      final mediaType = MediaTypeObjectV3.fromMap({
-        'schema': {'type': 'string'},
-        'example': 'value-1',
-      });
-  
-      expect(mediaType.example, 'value-1');
-      expect(mediaType.toMap()['example'], 'value-1');
-    });
-  
-    test('LinkObjectV3 parameters accept runtime expressions and literals', () {
-      final link = LinkObjectV3.fromMap({
-        'operationId': 'getUser',
-        'parameters': {
-          'userId': r'$request.path.id',
-          'fixed': 42,
-          'payload': {'k': 'v'},
-        },
-      });
-  
-      expect(link.parameters!['userId'], r'$request.path.id');
-      expect(link.parameters!['fixed'], 42);
-      expect(link.parameters!['payload'], {'k': 'v'});
-      expect(link.toMap()['parameters']['userId'], r'$request.path.id');
-    });
-  
-    test('SchemaObjectV3 preserves id and \$schema', () {
-      final schema = SchemaObjectV3.fromMap({
-        'id': 'my-id',
-        '\$schema': 'http://json-schema.org/draft-07/schema#',
-        'type': 'string',
-      });
-  
-      final mapped = schema.toMap();
-      expect(mapped['id'], 'my-id');
-      expect(mapped['\$schema'], 'http://json-schema.org/draft-07/schema#');
+
+  test('MediaTypeObjectV3 preserves singular example', () {
+    final mediaType = MediaTypeObjectV3.fromMap({
+      'schema': {'type': 'string'},
+      'example': 'value-1',
     });
 
-  test('SecuritySchemeObjectV2 parses oauth2 and preserves vendor extensions', () {
-    final scheme = SecuritySchemeObjectV2.fromMap({
-      'type': 'oauth2',
-      'flow': 'accessCode',
-      'authorizationUrl': 'https://example.com/auth',
-      'tokenUrl': 'https://example.com/token',
-      'scopes': {'read': 'Read access'},
-      'x-provider': 'custom-idp',
-    });
-
-    expect(scheme, isA<SecuritySchemeOAuth2AccessCodeV2>());
-    expect(scheme.toMap()['x-provider'], 'custom-idp');
+    expect(mediaType.example, 'value-1');
+    expect(mediaType.toMap()['example'], 'value-1');
   });
+
+  test('LinkObjectV3 parameters accept runtime expressions and literals', () {
+    final link = LinkObjectV3.fromMap({
+      'operationId': 'getUser',
+      'parameters': {
+        'userId': r'$request.path.id',
+        'fixed': 42,
+        'payload': {'k': 'v'},
+      },
+    });
+
+    expect(link.parameters!['userId'], r'$request.path.id');
+    expect(link.parameters!['fixed'], 42);
+    expect(link.parameters!['payload'], {'k': 'v'});
+    expect(link.toMap()['parameters']['userId'], r'$request.path.id');
+  });
+
+  test('SchemaObjectV3 preserves id and \$schema', () {
+    final schema = SchemaObjectV3.fromMap({
+      'id': 'my-id',
+      '\$schema': 'http://json-schema.org/draft-07/schema#',
+      'type': 'string',
+    });
+
+    final mapped = schema.toMap();
+    expect(mapped['id'], 'my-id');
+    expect(mapped['\$schema'], 'http://json-schema.org/draft-07/schema#');
+  });
+
+  test(
+    'SecuritySchemeObjectV2 parses oauth2 and preserves vendor extensions',
+    () {
+      final scheme = SecuritySchemeObjectV2.fromMap({
+        'type': 'oauth2',
+        'flow': 'accessCode',
+        'authorizationUrl': 'https://example.com/auth',
+        'tokenUrl': 'https://example.com/token',
+        'scopes': {'read': 'Read access'},
+        'x-provider': 'custom-idp',
+      });
+
+      expect(scheme, isA<SecuritySchemeOAuth2AccessCodeV2>());
+      expect(scheme.toMap()['x-provider'], 'custom-idp');
+    },
+  );
 
   test('SecuritySchemeObjectV2 accepts legacy oauth alias', () {
     final scheme = SecuritySchemeObjectV2.fromMap({
@@ -111,7 +114,7 @@ void main() {
     expect(scheme.toMap()['x-tier'], 'enterprise');
     expect(scheme.toMap()['mtlsMode'], 'strict');
   });
-  
+
   test('ParameterObjectV2 supports array items and collectionFormat', () {
     final parameter = ParameterObjectV2.fromMap({
       'name': 'ids',
@@ -120,7 +123,7 @@ void main() {
       'collectionFormat': 'csv',
       'items': {'type': 'string'},
     });
-  
+
     expect(parameter.collectionFormat, 'csv');
     expect(parameter.items, isA<ItemsObjectV2>());
     expect(parameter.toMap()['collectionFormat'], 'csv');
@@ -137,7 +140,10 @@ void main() {
 
     expect(operation.responses, isNotNull);
     expect(operation.responses['default'], isA<ResponseObjectV3>());
-    expect(operation.toMap()['responses']['default']['description'], 'fallback');
+    expect(
+      operation.toMap()['responses']['default']['description'],
+      'fallback',
+    );
   });
 
   test('Schema/Response/MediaType preserve x- extensions on round-trip', () {
@@ -161,9 +167,7 @@ void main() {
 
   test('OperationObjectV3 requires responses', () {
     expect(
-      () => OperationObjectV3.fromMap({
-        'operationId': 'op1',
-      }),
+      () => OperationObjectV3.fromMap({'operationId': 'op1'}),
       throwsA(isA<ArgumentError>()),
     );
   });
@@ -361,60 +365,64 @@ void main() {
     });
 
     final issues = const OpenApiValidator().validate(document);
-    expect(issues.any((issue) => issue.message.contains('Duplicate operationId')), isTrue);
+    expect(
+      issues.any((issue) => issue.message.contains('Duplicate operationId')),
+      isTrue,
+    );
   });
 
-  test('OpenApiValidator.validateMap reports mixed 3.1 features in 3.0 maps', () {
-    final issues = const OpenApiValidator().validateMap({
-      'openapi': '3.0.0',
-      'info': {
-        'title': 'Demo API',
-        'version': '1.0.0',
-        'summary': '3.1-only info summary',
-        'license': {
-          'name': 'MIT',
-          'identifier': 'MIT',
+  test(
+    'OpenApiValidator.validateMap reports mixed 3.1 features in 3.0 maps',
+    () {
+      final issues = const OpenApiValidator().validateMap({
+        'openapi': '3.0.0',
+        'info': {
+          'title': 'Demo API',
+          'version': '1.0.0',
+          'summary': '3.1-only info summary',
+          'license': {'name': 'MIT', 'identifier': 'MIT'},
         },
-      },
-      'jsonSchemaDialect': 'https://json-schema.org/draft/2020-12/schema',
-      'webhooks': {},
-      'components': {
-        'pathItems': {},
-      },
-      'paths': {
-        '/ping': {
-          'servers': [
-            {'url': 'https://api.example.com'},
-          ],
-          'get': {
-            'responses': {
-              '200': {'description': 'ok'},
+        'jsonSchemaDialect': 'https://json-schema.org/draft/2020-12/schema',
+        'webhooks': {},
+        'components': {'pathItems': {}},
+        'paths': {
+          '/ping': {
+            'servers': [
+              {'url': 'https://api.example.com'},
+            ],
+            'get': {
+              'responses': {
+                '200': {'description': 'ok'},
+              },
             },
           },
         },
-      },
-    });
+      });
 
-    final issuePaths = issues.map((issue) => issue.path).toSet();
-    expect(issuePaths.contains('webhooks'), isTrue);
-    expect(issuePaths.contains('jsonSchemaDialect'), isTrue);
-    expect(issuePaths.contains('components.pathItems'), isTrue);
-    expect(issuePaths.contains('info.summary'), isTrue);
-    expect(issuePaths.contains('info.license.identifier'), isTrue);
-    expect(issuePaths.contains('paths./ping.servers'), isTrue);
-  });
+      final issuePaths = issues.map((issue) => issue.path).toSet();
+      expect(issuePaths.contains('webhooks'), isTrue);
+      expect(issuePaths.contains('jsonSchemaDialect'), isTrue);
+      expect(issuePaths.contains('components.pathItems'), isTrue);
+      expect(issuePaths.contains('info.summary'), isTrue);
+      expect(issuePaths.contains('info.license.identifier'), isTrue);
+      expect(issuePaths.contains('paths./ping.servers'), isTrue);
+    },
+  );
 
-  test('SchemaObjectV3 accepts JsonSchema subclasses in allOf/oneOf/anyOf/not', () {
-    expect(
-      () => SchemaObjectV3(
-        allOf: [_CustomJsonSchema()],
-        oneOf: [_CustomJsonSchema()],
-        anyOf: [_CustomJsonSchema()],
-        not: _CustomJsonSchema(),
-      ),
-      returnsNormally,
-    );
-  });
+  test(
+    'SchemaObjectV3 accepts JsonSchema subclasses in allOf/oneOf/anyOf/not',
+    () {
+      expect(
+        () => SchemaObjectV3(
+          allOf: [_CustomJsonSchema()],
+          oneOf: [_CustomJsonSchema()],
+          anyOf: [_CustomJsonSchema()],
+          not: _CustomJsonSchema(),
+        ),
+        returnsNormally,
+      );
+    },
+  );
 
   test('SchemaObjectV3 accepts non-string discriminator mapping values', () {
     final schema = SchemaObjectV3.fromMap({
@@ -452,7 +460,11 @@ void main() {
       explode: false,
     );
 
-    final serialized = param.serializeValue(['3', '4', '5'], parameterName: 'id');
+    final serialized = param.serializeValue([
+      '3',
+      '4',
+      '5',
+    ], parameterName: 'id');
     expect(serialized, ';id=3,4,5');
   });
 
@@ -491,10 +503,10 @@ void main() {
     });
 
     expect(components.schemas!['NullableString'], isA<SchemaObjectV31>());
-    expect(
-      (components.schemas!['NullableString'] as SchemaObjectV31).types,
-      ['string', 'null'],
-    );
+    expect((components.schemas!['NullableString'] as SchemaObjectV31).types, [
+      'string',
+      'null',
+    ]);
   });
 
   test('DocumentV31 accepts paths structure', () {
@@ -528,7 +540,9 @@ void main() {
       () => DocumentV31(
         openapi: '3.0.9',
         info: const InfoObjectV31(title: 'Demo', version: '1.0.0'),
-        structure: PathsWebhooksComponentsV31(components: ComponentsObjectV31()),
+        structure: PathsWebhooksComponentsV31(
+          components: ComponentsObjectV31(),
+        ),
       ),
       throwsA(isA<ArgumentError>()),
     );

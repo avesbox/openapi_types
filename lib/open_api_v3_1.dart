@@ -406,11 +406,7 @@ class InfoObjectV31 extends InfoObject {
 /// License object as per OpenAPI 3.1 specification.
 class LicenseObjectV31 extends LicenseObject {
   /// Creates a [LicenseObjectV31] with the given parameters.
-  const LicenseObjectV31({
-    required super.name,
-    super.url,
-    super.identifier,
-  });
+  const LicenseObjectV31({required super.name, super.url, super.identifier});
 
   /// Creates a [LicenseObjectV31] from a map.
   factory LicenseObjectV31.fromMap(Map map) {
@@ -549,7 +545,9 @@ class OperationObjectV31 extends OperationObjectV3 {
   /// Creates an [OperationObjectV31] from a map.
   factory OperationObjectV31.fromMap(Map map) {
     if (map['responses'] == null) {
-      throw ArgumentError('OperationObjectV31 requires a non-null responses object');
+      throw ArgumentError(
+        'OperationObjectV31 requires a non-null responses object',
+      );
     }
     return OperationObjectV31(
       servers: map['servers'] != null

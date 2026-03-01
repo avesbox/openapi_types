@@ -111,7 +111,8 @@ class OpenApiValidator {
           ),
         );
       }
-      if (info['license'] is Map && (info['license'] as Map).containsKey('identifier')) {
+      if (info['license'] is Map &&
+          (info['license'] as Map).containsKey('identifier')) {
         issues.add(
           const OpenApiValidationIssue(
             path: 'info.license.identifier',
@@ -125,7 +126,8 @@ class OpenApiValidator {
     if (map['paths'] is Map) {
       final paths = map['paths'] as Map;
       for (final pathEntry in paths.entries) {
-        if (pathEntry.value is Map && (pathEntry.value as Map).containsKey('servers')) {
+        if (pathEntry.value is Map &&
+            (pathEntry.value as Map).containsKey('servers')) {
           issues.add(
             OpenApiValidationIssue(
               path: 'paths.${pathEntry.key}.servers',
@@ -224,8 +226,9 @@ class OpenApiValidator {
     }
 
     if (document is DocumentV31) {
-      for (final pathEntry in document.paths?.entries ??
-          <MapEntry<String, PathItemObjectV31>>[]) {
+      for (final pathEntry
+          in document.paths?.entries ??
+              <MapEntry<String, PathItemObjectV31>>[]) {
         for (final operationEntry in pathEntry.value.operations.entries) {
           final operation = operationEntry.value;
           addOperationId(
