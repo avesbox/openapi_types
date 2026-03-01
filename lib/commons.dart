@@ -5,11 +5,8 @@ class ReferenceObject extends JsonSchema<Map<String, dynamic>> {
   /// A short summary for the referenced value.
   final String? summary;
 
-  /// A description for the referenced value.
-  final String? description;
-
   /// Creates a [ReferenceObject] with the given [ref].
-  ReferenceObject(String ref, {this.summary, this.description})
+  ReferenceObject(String ref, {this.summary, super.description})
     : super(ref: ref);
 
   /// Creates a [ReferenceObject] from a map.
@@ -403,5 +400,6 @@ class JsonSchema<T> extends OpenApiObject<Map<String, dynamic>> {
     };
   }
 
+  /// Converts the [JsonSchema] to a JSON map.
   Map<String, dynamic> toJson() => toMap();
 }

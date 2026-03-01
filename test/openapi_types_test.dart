@@ -1,9 +1,3 @@
-import 'package:openapi_types/commons.dart';
-import 'package:openapi_types/open_api_parser.dart';
-import 'package:openapi_types/open_api_validator.dart';
-import 'package:openapi_types/open_api_v2.dart';
-import 'package:openapi_types/open_api_v3.dart';
-import 'package:openapi_types/open_api_v3_1.dart';
 import 'package:openapi_types/openapi_types.dart';
 import 'package:test/test.dart';
 
@@ -325,7 +319,7 @@ void main() {
         info: const InfoObject(title: 'Demo API', version: '1.0.0'),
         paths: {
           '/ping': PathItemObjectV31(
-            servers: [ServerObjectV3(url: 'https://api.example.com')],
+            servers: [const ServerObjectV3(url: 'https://api.example.com')],
             operations: {
               'get': OperationObjectV31(
                 responses: ResponsesV31({

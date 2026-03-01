@@ -29,6 +29,7 @@ abstract class OpenAPIDocument<T extends Map<String, dynamic>> {
   /// Vendor-specific extension fields (`x-*`) merged into the document.
   final T? extensions;
 
+  /// The [info] field contains metadata about the API.
   final InfoObject info;
 
   /// Converts the [OpenAPIDocument] to a map.

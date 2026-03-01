@@ -511,8 +511,6 @@ class PathItemObjectV31 extends PathItemObjectV3 {
 
 /// Operation object as per OpenAPI 3.1 specification.
 class OperationObjectV31 extends OperationObjectV3 {
-  /// A map of possible out-of-band callbacks related to the parent operation.
-  final Map<String, Object>? callbacks;
 
   /// Creates an [OperationObjectV31] with the given parameters.
   OperationObjectV31({
@@ -525,7 +523,7 @@ class OperationObjectV31 extends OperationObjectV3 {
     super.parameters,
     super.requestBody,
     required super.responses,
-    this.callbacks,
+    super.callbacks,
     super.deprecated,
     super.security,
     super.extensions,

@@ -165,6 +165,7 @@ sealed class SecuritySchemeObjectV2
   });
 
   /// Converts the [SecuritySchemeObjectV2] to a map.
+  @override
   Map<String, dynamic> toMap() {
     return {
       'type': type,
@@ -254,6 +255,7 @@ class SecuritySchemeCustomV2 extends SecuritySchemeObjectV2 {
   /// Additional properties defined by the scheme.
   final Map<String, dynamic> properties;
 
+  /// Creates a [SecuritySchemeCustomV2] with the given [type], optional [description], and additional [properties].
   SecuritySchemeCustomV2({
     required super.type,
     super.description,
@@ -851,9 +853,6 @@ class SchemaObjectV2 extends JsonSchema<Object> {
   /// An example instance of the schema.
   final Object? example;
 
-  /// The default value of the schema.
-  final Object? defaultValue;
-
   @override
   // ignore: overridden_fields
   final Map<String, SchemaObjectV2>? properties;
@@ -864,7 +863,7 @@ class SchemaObjectV2 extends JsonSchema<Object> {
     super.description,
     super.type,
     super.multipleOf,
-    this.defaultValue,
+    super.defaultValue,
     super.maximum,
     super.exclusiveMaximum,
     super.minimum,

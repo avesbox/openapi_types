@@ -8,6 +8,7 @@ class OpenApiValidationIssue {
   /// Validation message.
   final String message;
 
+  /// Creates an [OpenApiValidationIssue] with the given [path] and [message].
   const OpenApiValidationIssue({required this.path, required this.message});
 }
 
@@ -146,7 +147,7 @@ class OpenApiValidator {
   ) {
     if (document is DocumentV2 && document.swagger != '2.0') {
       issues.add(
-        OpenApiValidationIssue(
+        const OpenApiValidationIssue(
           path: 'swagger',
           message: 'Swagger version must be exactly 2.0.',
         ),
@@ -157,7 +158,7 @@ class OpenApiValidator {
     if (document is DocumentV3 &&
         !RegExp(r'^3\\.0\\.\\d+$').hasMatch(document.openapi)) {
       issues.add(
-        OpenApiValidationIssue(
+        const OpenApiValidationIssue(
           path: 'openapi',
           message: 'OpenAPI 3.0 document version must match 3.0.x.',
         ),
@@ -168,7 +169,7 @@ class OpenApiValidator {
     if (document is DocumentV31 &&
         !RegExp(r'^3\\.1\\.\\d+$').hasMatch(document.openapi)) {
       issues.add(
-        OpenApiValidationIssue(
+        const OpenApiValidationIssue(
           path: 'openapi',
           message: 'OpenAPI 3.1 document version must match 3.1.x.',
         ),

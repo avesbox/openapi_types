@@ -905,6 +905,7 @@ class MediaTypeObjectV3 extends OpenApiObject<Map<String, dynamic>> {
   }
 
   /// Converts the [MediaTypeObjectV3] to a map.
+  @override
   Map<String, dynamic> toMap() {
     return {
       if (schema != null)
@@ -1103,9 +1104,11 @@ class ResponsesV3<T> {
     }
   }
 
-  operator [](T key) => responses[key];
+  /// Gets a response for a given response code.
+  OpenApiObject? operator [](T key) => responses[key];
 
-  operator []=(T key, OpenApiObject value) {
+  /// Sets a response for a given response code.
+  void operator []=(T key, OpenApiObject value) {
     if (value is! ResponseObjectV3 && value is! ReferenceObject) {
       throw ArgumentError(
         'Response $key must be of type ResponseObjectV3 or ReferenceObject',
