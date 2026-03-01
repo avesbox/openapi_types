@@ -154,6 +154,11 @@ class ParameterBaseObjectV3 extends OpenApiParameter<Map<String, dynamic>> {
     this.examples,
     this.content,
   }) {
+    if (schema != null && content != null) {
+      throw ArgumentError(
+        'Parameter must define either schema or content, but not both',
+      );
+    }
     for (final example
         in examples?.entries ?? <MapEntry<String, OpenApiObject>>[]) {
       if (example.value is! ExampleObjectV3 &&
@@ -169,6 +174,70 @@ class ParameterBaseObjectV3 extends OpenApiParameter<Map<String, dynamic>> {
       );
     }
   }
+
+  /// Serializes a parameter value according to OpenAPI style/explode options.
+  String serializeValue(Object value, {required String parameterName}) {
+    final effectiveStyle = style ?? 'form';
+    final effectiveExplode = explode ?? (effectiveStyle == 'form');
+
+    if (value is! List && value is! Map) {
+      return _primitiveValue(value);
+    }
+
+    if (value is List) {
+      final parts = value.map(_primitiveValue).toList();
+      switch (effectiveStyle) {
+        case 'spaceDelimited':
+          return parts.join(' ');
+        case 'pipeDelimited':
+          return parts.join('|');
+        case 'label':
+          return '.${parts.join('.')}';
+        case 'matrix':
+          if (effectiveExplode) {
+            return parts.map((item) => ';$parameterName=$item').join('');
+          }
+          return ';$parameterName=${parts.join(',')}';
+        case 'simple':
+        case 'form':
+        default:
+          if (effectiveStyle == 'form' && effectiveExplode) {
+            return parts.map((item) => '$parameterName=$item').join('&');
+          }
+          return parts.join(',');
+      }
+    }
+
+    final entries = (value as Map).entries
+        .map((entry) => MapEntry(entry.key.toString(), _primitiveValue(entry.value)))
+        .toList();
+
+    switch (effectiveStyle) {
+      case 'deepObject':
+        return entries
+            .map((entry) => '$parameterName[${entry.key}]=${entry.value}')
+            .join('&');
+      case 'label':
+        if (effectiveExplode) {
+          return '.${entries.map((entry) => '${entry.key}=${entry.value}').join('.')}';
+        }
+        return '.${entries.expand((entry) => [entry.key, entry.value]).join(',')}';
+      case 'matrix':
+        if (effectiveExplode) {
+          return entries.map((entry) => ';${entry.key}=${entry.value}').join('');
+        }
+        return ';$parameterName=${entries.expand((entry) => [entry.key, entry.value]).join(',')}';
+      case 'simple':
+      case 'form':
+      default:
+        if (effectiveStyle == 'form' && effectiveExplode) {
+          return entries.map((entry) => '${entry.key}=${entry.value}').join('&');
+        }
+        return entries.expand((entry) => [entry.key, entry.value]).join(',');
+    }
+  }
+
+  String _primitiveValue(Object? value) => value?.toString() ?? '';
 
   @override
   Map<String, dynamic> toMap() {
@@ -232,6 +301,8 @@ class SchemaObjectV3<E extends Object> extends JsonSchema<E> {
 
   /// Creates a [SchemaObjectV3] with the given parameters.
   SchemaObjectV3({
+    super.id,
+    super.schema,
     super.title,
     super.description,
     super.type,
@@ -266,6 +337,7 @@ class SchemaObjectV3<E extends Object> extends JsonSchema<E> {
     this.example,
     super.items,
     this.deprecated,
+    super.extensions,
   }) {
     for (final property
         in (properties?.entries ?? <MapEntry<String, JsonSchema>>[])) {
@@ -276,30 +348,9 @@ class SchemaObjectV3<E extends Object> extends JsonSchema<E> {
         );
       }
     }
-    for (final schema in allOf ?? <Object>[]) {
-      if (schema.isNotOpenApiV3Schema) {
-        throw ArgumentError(
-          'AllOf schema must be of type int, double, String, bool, List, Map, num or ReferenceObject',
-        );
-      }
-    }
-    for (final schema in oneOf ?? <Object>[]) {
-      if (schema.isNotOpenApiV3Schema) {
-        throw ArgumentError(
-          'OneOf schema must be of type int, double, String, bool, List, Map, num or ReferenceObject',
-        );
-      }
-    }
-    for (final schema in anyOf ?? <Object>[]) {
-      if (schema.isNotOpenApiV3Schema) {
-        throw ArgumentError(
-          'AnyOf schema must be of type int, double, String, bool, List, Map, num or ReferenceObject',
-        );
-      }
-    }
-    if (not.isNotOpenApiV3Schema) {
+    if (not != null && not is! JsonSchema && not is! ReferenceObject) {
       throw ArgumentError(
-        'Not schema must be of type int, double, String, bool, List, Map, num or ReferenceObject',
+        'Not schema must be a JsonSchema or ReferenceObject',
       );
     }
     if (type == OpenApiType.array() && (items == null)) {
@@ -312,6 +363,8 @@ class SchemaObjectV3<E extends Object> extends JsonSchema<E> {
   /// Creates a [SchemaObjectV3] from a map.
   factory SchemaObjectV3.fromMap(Map data) {
     return SchemaObjectV3(
+      id: data['id'],
+      schema: data[r'$schema'],
       title: data['title'],
       description: data['description'],
       type: data['type'] != null
@@ -403,7 +456,7 @@ class SchemaObjectV3<E extends Object> extends JsonSchema<E> {
           ? DiscriminatorObjectV3(
               propertyName: data['discriminator']['propertyName'],
               mapping: data['discriminator']['mapping'] != null
-                  ? Map<String, String>.from(data['discriminator']['mapping'])
+              ? Map<String, Object?>.from(data['discriminator']['mapping'])
                   : null,
             )
           : null,
@@ -431,6 +484,11 @@ class SchemaObjectV3<E extends Object> extends JsonSchema<E> {
                 ? ReferenceObject(data['items']['\$ref'])
                 : SchemaObjectV3.fromMap(data['items'])
           : null,
+      extensions: {
+        for (final entry in data.entries)
+          if (entry.key is String && entry.key.startsWith('x-'))
+            entry.key: entry.value,
+      },
     );
   }
 
@@ -525,6 +583,7 @@ class SchemaObjectV3<E extends Object> extends JsonSchema<E> {
       if (externalDocs != null) 'externalDocs': externalDocs!.toMap(),
       if (example != null) 'example': example,
       if (deprecated != null) 'deprecated': deprecated,
+      ...super.toMap(),
     };
   }
 }
@@ -535,7 +594,7 @@ class DiscriminatorObjectV3 {
   final String propertyName;
 
   /// An optional mapping between the discriminator value and the schema it
-  final Map<String, String>? mapping;
+  final Map<String, Object?>? mapping;
 
   /// Creates a [DiscriminatorObjectV3] with the given parameters.
   const DiscriminatorObjectV3({required this.propertyName, this.mapping});
@@ -624,10 +683,29 @@ class ParameterObjectV3 extends ParameterBaseObjectV3 {
       style: map['style'],
       explode: map['explode'],
       allowReserved: map['allowReserved'],
-      schema: map['schema'] ?? {},
+      schema: map['schema'] != null
+          ? map['schema'] is Map && map['schema'].containsKey('\$ref')
+                ? ReferenceObject.fromMap(map['schema'])
+                : SchemaObjectV3.fromMap(map['schema'])
+          : null,
       example: map['example'],
-      examples: map['examples'],
-      content: map['content'],
+      examples: map['examples'] != null
+          ? (map['examples'] as Map).map(
+              (key, value) => MapEntry(
+                key,
+                value is Map
+                    ? ExampleObjectV3.fromMap(value)
+                    : value is String
+                    ? ReferenceObject(value)
+                    : throw ArgumentError('Example must be of type Map or String'),
+              ),
+            )
+          : null,
+      content: map['content'] != null
+          ? (map['content'] as Map).map(
+              (key, value) => MapEntry(key, MediaTypeObjectV3.fromMap(value)),
+            )
+          : null,
     );
   }
 
@@ -664,10 +742,29 @@ class HeaderObjectV3 extends ParameterBaseObjectV3 {
       style: map['style'],
       explode: map['explode'],
       allowReserved: map['allowReserved'],
-      schema: map['schema'] ?? {},
+      schema: map['schema'] != null
+          ? map['schema'] is Map && map['schema'].containsKey('\$ref')
+                ? ReferenceObject.fromMap(map['schema'])
+                : SchemaObjectV3.fromMap(map['schema'])
+          : null,
       example: map['example'],
-      examples: map['examples'],
-      content: map['content'],
+      examples: map['examples'] != null
+          ? (map['examples'] as Map).map(
+              (key, value) => MapEntry(
+                key,
+                value is Map
+                    ? ExampleObjectV3.fromMap(value)
+                    : value is String
+                    ? ReferenceObject(value)
+                    : throw ArgumentError('Example must be of type Map or String'),
+              ),
+            )
+          : null,
+      content: map['content'] != null
+          ? (map['content'] as Map).map(
+              (key, value) => MapEntry(key, MediaTypeObjectV3.fromMap(value)),
+            )
+          : null,
     );
   }
 }
@@ -716,9 +813,12 @@ class ExampleObjectV3 extends OpenApiObject<Map<String, dynamic>> {
 }
 
 /// Media type object representing a media type in a request or response.
-class MediaTypeObjectV3 {
+class MediaTypeObjectV3 extends OpenApiObject<Map<String, dynamic>> {
   /// The schema defining the type used for the media type.
   final OpenApiObject? schema;
+
+  /// A single example for the media type.
+  final Object? example;
 
   /// Examples of the media type.
   final Map<String, OpenApiObject>? examples;
@@ -727,7 +827,18 @@ class MediaTypeObjectV3 {
   final Map<String, EncodingObjectV3>? encoding;
 
   /// Creates a [MediaTypeObjectV3] with the given parameters.
-  MediaTypeObjectV3({this.schema, this.examples, this.encoding}) {
+  MediaTypeObjectV3({
+    this.schema,
+    this.example,
+    this.examples,
+    this.encoding,
+    super.extensions,
+  }) {
+    if (example != null && examples != null) {
+      throw ArgumentError(
+        'MediaType cannot define both example and examples at the same time',
+      );
+    }
     for (final example
         in examples?.entries ?? <MapEntry<String, OpenApiObject>>[]) {
       if (example.value is! ExampleObjectV3 &&
@@ -755,6 +866,7 @@ class MediaTypeObjectV3 {
         : null;
     return MediaTypeObjectV3(
       schema: schema,
+      example: data['example'],
       examples: data['examples'] != null
           ? (data['examples'] as Map).map(
               (key, value) => MapEntry(
@@ -775,6 +887,11 @@ class MediaTypeObjectV3 {
                   MapEntry(key, EncodingObjectV3.fromMap(data['encoding'])),
             )
           : null,
+      extensions: {
+        for (final entry in data.entries)
+          if (entry.key is String && entry.key.startsWith('x-'))
+            entry.key: entry.value,
+      },
     );
   }
 
@@ -796,10 +913,12 @@ class MediaTypeObjectV3 {
                 ? (entry.value as ExampleObjectV3).toMap()
                 : entry.value,
         },
+      if (example != null) 'example': example,
       if (encoding != null)
         'encoding': {
           for (final entry in encoding!.entries) entry.key: entry.value.toMap(),
         },
+      ...super.toMap(),
     };
   }
 }
@@ -892,7 +1011,7 @@ class LinkObjectV3 extends OpenApiObject<Map<String, dynamic>> {
   final String? operationId;
 
   /// A map of parameters for the link.
-  final Map<String, OpenApiObject>? parameters;
+  final Map<String, Object>? parameters;
 
   /// A request body for the link.
   final Object? requestBody;
@@ -921,16 +1040,7 @@ class LinkObjectV3 extends OpenApiObject<Map<String, dynamic>> {
       operationId: data['operationId'],
       parameters: data['parameters'] != null
           ? (data['parameters'] as Map).map(
-              (key, value) => MapEntry(
-                key,
-                value is Map
-                    ? SchemaObjectV3.fromMap(value)
-                    : value is String
-                    ? ReferenceObject(value)
-                    : throw ArgumentError(
-                        'Parameter must be of type Map or String',
-                      ),
-              ),
+              (key, value) => MapEntry(key.toString(), value),
             )
           : null,
       requestBody: data['requestBody'],
@@ -949,7 +1059,9 @@ class LinkObjectV3 extends OpenApiObject<Map<String, dynamic>> {
       if (parameters != null)
         'parameters': {
           for (final entry in parameters!.entries)
-            entry.key: entry.value.toMap(),
+            entry.key: entry.value is OpenApiObject
+                ? (entry.value as OpenApiObject).toMap()
+                : entry.value,
         },
       if (requestBody != null) 'requestBody': requestBody,
       if (description != null) 'description': description,
@@ -1012,7 +1124,7 @@ class ResponsesV3<T> {
 /// Response object representing a response in an operation.
 class ResponseObjectV3 extends OpenApiObject<Map<String, dynamic>> {
   /// A description of the response.
-  String? description;
+  String description;
 
   /// A map of media types to media type objects.
   Map<String, MediaTypeObjectV3>? content;
@@ -1024,7 +1136,13 @@ class ResponseObjectV3 extends OpenApiObject<Map<String, dynamic>> {
   Map<String, OpenApiObject>? links;
 
   /// Creates a [ResponseObjectV3] with the given parameters.
-  ResponseObjectV3({this.description, this.content, this.headers, this.links}) {
+  ResponseObjectV3({
+    required this.description,
+    this.content,
+    this.headers,
+    this.links,
+    super.extensions,
+  }) {
     for (final header
         in headers?.entries ?? <MapEntry<String, OpenApiObject>>[]) {
       if (header.value is! HeaderObjectV3 && header.value is! ReferenceObject) {
@@ -1044,6 +1162,9 @@ class ResponseObjectV3 extends OpenApiObject<Map<String, dynamic>> {
 
   /// Creates a [ResponseObjectV3] from a map.
   factory ResponseObjectV3.fromMap(Map data) {
+    if (!data.containsKey('description') || data['description'] == null) {
+      throw ArgumentError('ResponseObjectV3 requires a non-null description');
+    }
     return ResponseObjectV3(
       description: data['description'],
       content: data['content'] != null
@@ -1077,13 +1198,18 @@ class ResponseObjectV3 extends OpenApiObject<Map<String, dynamic>> {
               ),
             )
           : null,
+      extensions: {
+        for (final entry in data.entries)
+          if (entry.key is String && entry.key.startsWith('x-'))
+            entry.key: entry.value,
+      },
     );
   }
 
   @override
   Map<String, dynamic> toMap() {
     return {
-      if (description != null) 'description': description,
+      'description': description,
       if (content != null)
         'content': {
           for (final entry in content!.entries) entry.key: entry.value.toMap(),
@@ -1106,6 +1232,7 @@ class ResponseObjectV3 extends OpenApiObject<Map<String, dynamic>> {
                 ? (entry.value as LinkObjectV3).toMap()
                 : entry.value,
         },
+      ...super.toMap(),
     };
   }
 }
@@ -1119,26 +1246,32 @@ class RequestBodyV3 extends OpenApiObject<Map<String, dynamic>> {
   final bool? required;
 
   /// A map of media types to media type objects.
-  final Map<String, MediaTypeObjectV3>? content;
+  final Map<String, MediaTypeObjectV3> content;
 
   /// Creates a [RequestBodyV3] with the given parameters.
   const RequestBodyV3({
     this.description,
     this.required,
-    this.content,
+    required this.content,
     super.extensions,
   });
 
   /// Creates a [RequestBodyV3] from a map.
   factory RequestBodyV3.fromMap(Map data) {
+    if (data['content'] == null) {
+      throw ArgumentError('RequestBodyV3 requires a non-null content map');
+    }
     return RequestBodyV3(
       description: data['description'],
       required: data['required'],
-      content: data['content'] != null
-          ? (data['content'] as Map).map(
-              (key, value) => MapEntry(key, MediaTypeObjectV3.fromMap(value)),
-            )
-          : null,
+      content: (data['content'] as Map).map(
+        (key, value) => MapEntry(key, MediaTypeObjectV3.fromMap(value)),
+      ),
+      extensions: {
+        for (final entry in data.entries)
+          if (entry.key is String && entry.key.startsWith('x-'))
+            entry.key: entry.value,
+      },
     );
   }
 
@@ -1147,10 +1280,9 @@ class RequestBodyV3 extends OpenApiObject<Map<String, dynamic>> {
     return {
       if (description != null) 'description': description,
       if (required != null) 'required': required,
-      if (content != null)
-        'content': {
-          for (final entry in content!.entries) entry.key: entry.value.toMap(),
-        },
+      'content': {
+        for (final entry in content.entries) entry.key: entry.value.toMap(),
+      },
       ...super.toMap(),
     };
   }
@@ -1194,7 +1326,10 @@ class OperationObjectV3 extends OpenApiOperation<Map<String, dynamic>> {
   final OpenApiObject? requestBody;
 
   /// The responses for the operation.
-  final ResponsesV3? responses;
+  final ResponsesV3 responses;
+
+  /// A map of possible out-of-band callbacks related to the parent operation.
+  final Map<String, Object>? callbacks;
 
   /// Indicates whether the operation is deprecated.
   final bool? deprecated;
@@ -1214,7 +1349,8 @@ class OperationObjectV3 extends OpenApiOperation<Map<String, dynamic>> {
     this.operationId,
     this.parameters,
     this.requestBody,
-    this.responses,
+    required this.responses,
+    this.callbacks,
     this.deprecated,
     this.security,
     this.servers,
@@ -1234,38 +1370,58 @@ class OperationObjectV3 extends OpenApiOperation<Map<String, dynamic>> {
         'Request body must be of type RequestBodyV3 or ReferenceObject',
       );
     }
+    if (callbacks != null) {
+      for (final entry in callbacks!.entries) {
+        final value = entry.value;
+        if (value is! PathItemObjectV3 && value is! ReferenceObject) {
+          throw ArgumentError(
+            'Callback values must be either PathItemObjectV3 or ReferenceObject.',
+          );
+        }
+      }
+    }
   }
 
   /// Creates an [OperationObjectV3] from a map.
   factory OperationObjectV3.fromMap(Map map) {
+    if (map['responses'] == null) {
+      throw ArgumentError('OperationObjectV3 requires a non-null responses object');
+    }
     return OperationObjectV3(
       tags: map['tags'] != null ? List<String>.from(map['tags']) : null,
       summary: map['summary'],
       description: map['description'],
-      responses: map['responses'] != null
-          ? ResponsesV3(
-              (map['responses'] as Map).map(
-                (key, value) => MapEntry(
-                  key is int
-                      ? key
-                      : int.tryParse(key) ??
-                            (throw ArgumentError(
-                              'Response code must be an integer',
-                            )),
-                  value is Map
-                      ? ResponseObjectV3.fromMap(value)
-                      : value is String
-                      ? ReferenceObject(value)
-                      : throw ArgumentError(
-                          'Response must be of type Map or String',
-                        ),
-                ),
-              ),
-            )
+      responses: ResponsesV3<String>(
+        (map['responses'] as Map).map(
+          (key, value) => MapEntry(
+            key.toString(),
+            value is Map
+                ? ResponseObjectV3.fromMap(value)
+                : value is String
+                ? ReferenceObject(value)
+                : throw ArgumentError(
+                    'Response must be of type Map or String',
+                  ),
+          ),
+        ),
+      ),
+      callbacks: map['callbacks'] != null
+          ? {
+              for (final entry in (map['callbacks'] as Map).entries)
+                entry.key.toString(): entry.value is Map
+                    ? (entry.value[r'$ref'] != null
+                          ? ReferenceObject.fromMap(entry.value)
+                          : PathItemObjectV3.fromMap(entry.value))
+                    : entry.value is String
+                    ? ReferenceObject(entry.value)
+                    : throw ArgumentError(
+                        'Callback must be of type Map or String',
+                      ),
+            }
           : null,
       requestBody: map['requestBody'] != null
           ? map['requestBody'] is Map && map['requestBody'].containsKey('\$ref')
-                ? ReferenceObject(map['requestBody']['\$ref'])
+                ? ReferenceObject.fromMap(map['requestBody'])
                 : RequestBodyV3.fromMap(map['requestBody'])
           : null,
       externalDocs: map['externalDocs'] != null
@@ -1277,7 +1433,7 @@ class OperationObjectV3 extends OpenApiOperation<Map<String, dynamic>> {
               map['parameters'].map(
                 (item) => item is Map
                     ? item.containsKey('\$ref')
-                          ? ReferenceObject(item['\$ref'])
+                      ? ReferenceObject.fromMap(item)
                           : ParameterObjectV3.fromMap(item)
                     : item is String
                     ? ReferenceObject(item)
@@ -1343,7 +1499,16 @@ class OperationObjectV3 extends OpenApiOperation<Map<String, dynamic>> {
             : requestBody is RequestBodyV3
             ? (requestBody as RequestBodyV3).toMap()
             : requestBody,
-      if (responses != null) 'responses': responses!.toMap(),
+      'responses': responses.toMap(),
+      if (callbacks != null)
+        'callbacks': {
+          for (final entry in callbacks!.entries)
+            entry.key: entry.value is PathItemObjectV3
+                ? (entry.value as PathItemObjectV3).toMap()
+                : entry.value is ReferenceObject
+                ? (entry.value as ReferenceObject).toMap()
+                : entry.value,
+        },
       if (deprecated != null) 'deprecated': deprecated,
       if (security != null)
         'security': [for (final secReq in security!) secReq.toMap()],
@@ -1654,24 +1819,26 @@ sealed class SecuritySchemeObjectV3
         return ApiKeySecuritySchemeV3.fromMap(data);
       case 'oauth2':
         final flowsData = data['flows'] as Map<String, dynamic>;
-        final flows = <OAuthFlowObjectV3>[];
+        final flows = <String, OAuthFlowObjectV3>{};
         if (flowsData.containsKey('implicit')) {
           final implicit = flowsData['implicit'] as Map<String, dynamic>;
-          flows.add(ImplicitOAuthFlowV3.fromMap(implicit));
+          flows['implicit'] = ImplicitOAuthFlowV3.fromMap(implicit);
         }
         if (flowsData.containsKey('password')) {
           final password = flowsData['password'] as Map<String, dynamic>;
-          flows.add(PasswordOAuthFlowV3.fromMap(password));
+          flows['password'] = PasswordOAuthFlowV3.fromMap(password);
         }
         if (flowsData.containsKey('clientCredentials')) {
           final clientCredentials =
               flowsData['clientCredentials'] as Map<String, dynamic>;
-          flows.add(ClientCredentialsOAuthFlowV3.fromMap(clientCredentials));
+          flows['clientCredentials'] =
+              ClientCredentialsOAuthFlowV3.fromMap(clientCredentials);
         }
         if (flowsData.containsKey('authorizationCode')) {
           final authorizationCode =
               flowsData['authorizationCode'] as Map<String, dynamic>;
-          flows.add(AuthorizationCodeOAuthFlowV3.fromMap(authorizationCode));
+          flows['authorizationCode'] =
+              AuthorizationCodeOAuthFlowV3.fromMap(authorizationCode);
         }
         return OAuth2SecuritySchemeV3(
           flows: flows,
@@ -1758,44 +1925,22 @@ class ApiKeySecuritySchemeV3 extends SecuritySchemeObjectV3 {
 
 /// OAuth2 security scheme representing an OAuth2 authentication scheme.
 class OAuth2SecuritySchemeV3 extends SecuritySchemeObjectV3 {
-  /// A list of OAuth2 flow objects.
-  final List<OAuthFlowObjectV3> flows;
+  /// OAuth2 flows keyed by flow name (implicit, password, clientCredentials, authorizationCode).
+  final Map<String, OAuthFlowObjectV3> flows;
 
   /// Creates an [OAuth2SecuritySchemeV3] with the given parameters.
   OAuth2SecuritySchemeV3({required this.flows, super.description})
     : super(type: 'oauth2');
+
+  /// Backward-compatible flattened view of OAuth2 flows.
+  List<OAuthFlowObjectV3> get flowList => flows.values.toList();
 
   @override
   Map<String, dynamic> toMap() {
     return {
       ...super.toMap(),
       'flows': {
-        for (final flow in flows)
-          if (flow is ImplicitOAuthFlowV3)
-            'implicit': {
-              'authorizationUrl': flow.authorizationUrl,
-              if (flow.refreshUrl != null) 'refreshUrl': flow.refreshUrl,
-              'scopes': flow.scopes,
-            }
-          else if (flow is PasswordOAuthFlowV3)
-            'password': {
-              'tokenUrl': flow.tokenUrl,
-              if (flow.refreshUrl != null) 'refreshUrl': flow.refreshUrl,
-              'scopes': flow.scopes,
-            }
-          else if (flow is ClientCredentialsOAuthFlowV3)
-            'clientCredentials': {
-              'tokenUrl': flow.tokenUrl,
-              if (flow.refreshUrl != null) 'refreshUrl': flow.refreshUrl,
-              'scopes': flow.scopes,
-            }
-          else if (flow is AuthorizationCodeOAuthFlowV3)
-            'authorizationCode': {
-              'authorizationUrl': flow.authorizationUrl,
-              'tokenUrl': flow.tokenUrl,
-              if (flow.refreshUrl != null) 'refreshUrl': flow.refreshUrl,
-              'scopes': flow.scopes,
-            },
+        for (final entry in flows.entries) entry.key: entry.value.toMap(),
       },
     };
   }
@@ -2135,23 +2280,61 @@ class DocumentV3 extends OpenAPIDocument<Map<String, dynamic>> {
     this.externalDocs,
     super.extensions,
   }) {
-    if (openapi.split('.').length != 3 || !openapi.startsWith('3.0')) {
+    if (openapi.split('.').length != 3 || !openapi.startsWith('3.0.')) {
       throw ArgumentError('OpenAPI version must be in the format x.y.z');
+    }
+    if (paths.isEmpty) {
+      throw ArgumentError('paths is required and cannot be empty');
+    }
+    if (info.toMap().containsKey('summary')) {
+      throw ArgumentError(
+        'Info.summary is an OpenAPI 3.1 feature and is not allowed in 3.0 documents',
+      );
+    }
+    if (info.license?.identifier != null) {
+      throw ArgumentError(
+        'License.identifier is an OpenAPI 3.1 feature and is not allowed in 3.0 documents',
+      );
+    }
+    for (final pathEntry in paths.entries) {
+      final pathItem = pathEntry.value;
+      if (pathItem != null && pathItem.toMap().containsKey('servers')) {
+        throw ArgumentError(
+          'PathItem.servers is treated as an OpenAPI 3.1-only feature in this model and is not allowed in 3.0 documents (${pathEntry.key})',
+        );
+      }
     }
   }
 
   /// Creates a [DocumentV3] from a map.
   factory DocumentV3.fromMap(Map map) {
+    if (!map.containsKey('paths') || map['paths'] == null) {
+      throw ArgumentError('DocumentV3 requires a non-null paths object');
+    }
+    if (map.containsKey('webhooks')) {
+      throw ArgumentError(
+        'webhooks is an OpenAPI 3.1 feature and is not allowed in 3.0 documents',
+      );
+    }
+    if (map.containsKey('jsonSchemaDialect')) {
+      throw ArgumentError(
+        'jsonSchemaDialect is an OpenAPI 3.1 feature and is not allowed in 3.0 documents',
+      );
+    }
+    if (map['components'] is Map &&
+        (map['components'] as Map).containsKey('pathItems')) {
+      throw ArgumentError(
+        'components.pathItems is an OpenAPI 3.1 feature and is not allowed in 3.0 documents',
+      );
+    }
     return DocumentV3(
       info: InfoObject.fromMap(map['info'] ?? {}),
-      paths: map['paths'] != null
-          ? {
-              for (final entry in (map['paths'] as Map).entries)
-                entry.key: entry.value != null
-                    ? PathItemObjectV3.fromMap(entry.value)
-                    : null,
-            }
-          : {},
+      paths: {
+        for (final entry in (map['paths'] as Map).entries)
+          entry.key: entry.value != null
+              ? PathItemObjectV3.fromMap(entry.value)
+              : null,
+      },
       openapi: map['openapi'] ?? '3.0.0',
       components: map['components'] != null
           ? ComponentsObjectV3.fromMap(map['components'])

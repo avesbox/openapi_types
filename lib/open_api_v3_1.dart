@@ -73,7 +73,7 @@ class ComponentsObjectV31 extends ComponentsObjectV3 {
           ? {
               for (final entry in (map['schemas'] as Map).entries)
                 entry.key: entry.value is Map
-                    ? SchemaObjectV3.fromMap(entry.value)
+                    ? SchemaObjectV31.fromMap(entry.value)
                     : ReferenceObject(entry.value['\$ref']),
             }
           : null,
@@ -220,7 +220,11 @@ class DocumentV31 extends OpenAPIDocument<Map<String, dynamic>> {
     super.extensions,
   }) : paths = structure?.paths,
        webhooks = structure?.webhooks,
-       components = structure?.components;
+       components = structure?.components {
+    if (!RegExp(r'^3\.1\.\d+$').hasMatch(openapi)) {
+      throw ArgumentError('OpenAPI 3.1 version must be in the format 3.1.x');
+    }
+  }
 
   /// The OpenAPI version string.
   final String openapi;
@@ -361,6 +365,7 @@ class InfoObjectV31 extends InfoObject {
     super.description,
     super.contact,
     super.license,
+    super.extensions,
   });
 
   /// Creates an [InfoObjectV31] from a map.
@@ -384,6 +389,11 @@ class InfoObjectV31 extends InfoObject {
       license: map['license'] != null
           ? LicenseObjectV31.fromMap(map['license'])
           : null,
+      extensions: {
+        for (final entry in map.entries)
+          if (entry.key is String && entry.key.startsWith('x-'))
+            entry.key: entry.value,
+      },
     );
   }
 
@@ -395,11 +405,12 @@ class InfoObjectV31 extends InfoObject {
 
 /// License object as per OpenAPI 3.1 specification.
 class LicenseObjectV31 extends LicenseObject {
-  /// The SPDX license identifier.
-  final String? identifier;
-
   /// Creates a [LicenseObjectV31] with the given parameters.
-  const LicenseObjectV31({required super.name, super.url, this.identifier});
+  const LicenseObjectV31({
+    required super.name,
+    super.url,
+    super.identifier,
+  });
 
   /// Creates a [LicenseObjectV31] from a map.
   factory LicenseObjectV31.fromMap(Map map) {
@@ -417,7 +428,7 @@ class LicenseObjectV31 extends LicenseObject {
 
   @override
   Map<String, dynamic> toMap() {
-    return {...super.toMap(), if (identifier != null) 'identifier': identifier};
+    return {...super.toMap()};
   }
 }
 
@@ -517,7 +528,7 @@ class OperationObjectV31 extends OperationObjectV3 {
     super.operationId,
     super.parameters,
     super.requestBody,
-    super.responses,
+    required super.responses,
     this.callbacks,
     super.deprecated,
     super.security,
@@ -537,6 +548,9 @@ class OperationObjectV31 extends OperationObjectV3 {
 
   /// Creates an [OperationObjectV31] from a map.
   factory OperationObjectV31.fromMap(Map map) {
+    if (map['responses'] == null) {
+      throw ArgumentError('OperationObjectV31 requires a non-null responses object');
+    }
     return OperationObjectV31(
       servers: map['servers'] != null
           ? List<ServerObjectV3>.from(
@@ -564,20 +578,18 @@ class OperationObjectV31 extends OperationObjectV3 {
                 ? RequestBodyV3.fromMap(map['requestBody'])
                 : ReferenceObject(map['requestBody']['\$ref']))
           : null,
-      responses: map['responses'] != null
-          ? ResponsesV31(
-              map['responses'] is Map
-                  ? {
-                      for (final entry in (map['responses'] as Map).entries)
-                        entry.key: entry.value is Map
-                            ? ResponseObjectV3.fromMap(entry.value)
-                            : ReferenceObject(entry.value['\$ref']),
-                    }
-                  : throw Exception(
-                      'Responses must be a map. Found: ${map['responses']}',
-                    ),
-            )
-          : null,
+      responses: ResponsesV31(
+        map['responses'] is Map
+            ? {
+                for (final entry in (map['responses'] as Map).entries)
+                  entry.key: entry.value is Map
+                      ? ResponseObjectV3.fromMap(entry.value)
+                      : ReferenceObject(entry.value['\$ref']),
+              }
+            : throw Exception(
+                'Responses must be a map. Found: ${map['responses']}',
+              ),
+      ),
       callbacks: map['callbacks'] != null
           ? {
               for (final entry in (map['callbacks'] as Map).entries)
@@ -617,7 +629,7 @@ class OperationObjectV31 extends OperationObjectV3 {
       if (parameters != null)
         'parameters': [for (final parameter in parameters!) parameter.toMap()],
       if (requestBody != null) 'requestBody': requestBody!.toMap(),
-      if (responses != null) 'responses': responses!.toMap(),
+      'responses': responses.toMap(),
       if (callbacks != null)
         'callbacks': {
           for (final entry in callbacks!.entries)
@@ -664,10 +676,14 @@ class SchemaObjectV31 extends SchemaObjectV3 {
   /// The media type for the schema when used in content (e.g., "application/json").
   final String? contentMediaType;
 
+  /// Multi-type support introduced in JSON Schema 2020-12 (OpenAPI 3.1).
+  final List<String>? types;
+
   /// Creates a [SchemaObjectV31] with the given parameters.
   SchemaObjectV31({
     super.title,
     super.description,
+    super.type,
     super.defaultValue,
     super.multipleOf,
     super.maximum,
@@ -690,26 +706,95 @@ class SchemaObjectV31 extends SchemaObjectV3 {
     super.anyOf,
     super.properties,
     super.additionalProperties,
+    super.nullable,
     super.discriminator,
     super.readOnly,
     super.writeOnly,
     super.deprecated,
     super.externalDocs,
     super.xml,
+    super.items,
     this.$schema,
     this.examples,
     this.$const,
     this.contentMediaType,
+    this.types,
   });
+
+  /// Creates a [SchemaObjectV31] from a map.
+  factory SchemaObjectV31.fromMap(Map map) {
+    final normalized = Map<String, dynamic>.from(map);
+    OpenApiType? singleType;
+    List<String>? types;
+
+    final rawType = normalized['type'];
+    if (rawType is String) {
+      singleType = OpenApiType.custom(rawType, normalized['format']);
+    } else if (rawType is List) {
+      types = List<String>.from(rawType);
+      normalized.remove('type');
+      normalized.remove('format');
+    }
+
+    final base = SchemaObjectV3.fromMap(normalized);
+
+    return SchemaObjectV31(
+      title: base.title,
+      description: base.description,
+      type: singleType,
+      defaultValue: base.defaultValue,
+      multipleOf: base.multipleOf,
+      maximum: base.maximum,
+      exclusiveMaximum: base.exclusiveMaximum,
+      minimum: base.minimum,
+      exclusiveMinimum: base.exclusiveMinimum,
+      maxLength: base.maxLength,
+      minLength: base.minLength,
+      pattern: base.pattern,
+      additionalProperties: base.additionalProperties,
+      maxItems: base.maxItems,
+      minItems: base.minItems,
+      uniqueItems: base.uniqueItems,
+      maxProperties: base.maxProperties,
+      minProperties: base.minProperties,
+      required: base.required,
+      enumValues: base.enumValues,
+      properties: base.properties,
+      allOf: base.allOf,
+      oneOf: base.oneOf,
+      anyOf: base.anyOf,
+      not: base.not,
+      nullable: base.nullable,
+      discriminator: base.discriminator,
+      readOnly: base.readOnly,
+      writeOnly: base.writeOnly,
+      deprecated: base.deprecated,
+      externalDocs: base.externalDocs,
+      xml: base.xml,
+      items: base.items,
+      $schema: map['\$schema'],
+      examples: map['examples'] != null
+          ? List<Object>.from(map['examples'])
+          : null,
+      $const: map['const'],
+      contentMediaType: map['contentMediaType'],
+      types: types,
+    );
+  }
 
   @override
   Map<String, dynamic> toMap() {
-    return {
+    final result = <String, dynamic>{
       ...super.toMap(),
       if ($schema != null) '\$schema': $schema,
       if ($const != null) 'const': $const,
       if (examples != null) 'examples': examples,
       if (contentMediaType != null) 'contentMediaType': contentMediaType,
     };
+    if (types != null) {
+      result['type'] = types;
+      result.remove('format');
+    }
+    return result;
   }
 }

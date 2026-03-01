@@ -4,6 +4,7 @@ export 'open_api_v2.dart';
 export 'open_api_v3.dart';
 export 'open_api_v3_1.dart';
 export 'open_api_parser.dart';
+export 'open_api_validator.dart';
 export 'commons.dart';
 
 /// Base class for OpenAPI objects (e.g., [SchemaObjectV3], [ResponseObjectV31]).

@@ -2,12 +2,32 @@ import 'package:openapi_types/openapi_types.dart';
 
 /// A simple reference object to be used in various places.
 class ReferenceObject extends JsonSchema<Map<String, dynamic>> {
+  /// A short summary for the referenced value.
+  final String? summary;
+
+  /// A description for the referenced value.
+  final String? description;
+
   /// Creates a [ReferenceObject] with the given [ref].
-  ReferenceObject(String ref) : super(ref: ref);
+  ReferenceObject(String ref, {this.summary, this.description}) : super(ref: ref);
+
+  /// Creates a [ReferenceObject] from a map.
+  factory ReferenceObject.fromMap(Map map) {
+    return ReferenceObject(
+      map[r'$ref'],
+      summary: map['summary'],
+      description: map['description'],
+    );
+  }
 
   @override
   Map<String, dynamic> toMap() {
-    return {'\$ref': ref, ...super.toMap()};
+    return {
+      r'$ref': ref,
+      if (summary != null) 'summary': summary,
+      if (description != null) 'description': description,
+      ...super.toMap(),
+    };
   }
 }
 
@@ -31,6 +51,9 @@ class InfoObject {
   /// The version of the API.
   final String version;
 
+  /// Vendor-specific extension fields (`x-*`) merged into the object.
+  final Map<String, dynamic>? extensions;
+
   /// Creates an [InfoObject] with the given parameters.
   const InfoObject({
     required this.title,
@@ -39,6 +62,7 @@ class InfoObject {
     this.termsOfService,
     this.contact,
     this.license,
+    this.extensions,
   });
 
   /// Creates an [InfoObject] from a map.
@@ -62,6 +86,11 @@ class InfoObject {
           ? LicenseObject.fromMap(map['license'])
           : null,
       version: map['version'],
+      extensions: {
+        for (final entry in map.entries)
+          if (entry.key is String && entry.key.startsWith('x-'))
+            entry.key: entry.value,
+      },
     );
   }
 
@@ -74,6 +103,7 @@ class InfoObject {
       if (contact != null) 'contact': contact!.toMap(),
       if (license != null) 'license': license!.toMap(),
       'version': version,
+      if (extensions != null) ...extensions!,
     };
   }
 }
@@ -119,17 +149,28 @@ class LicenseObject {
   /// The URL of the license.
   final String? url;
 
+  /// The SPDX license identifier.
+  final String? identifier;
+
   /// Creates a [LicenseObject] with the given [name] and optional [url].
-  const LicenseObject({required this.name, this.url});
+  const LicenseObject({required this.name, this.url, this.identifier});
 
   /// Creates a [LicenseObject] from a map.
   factory LicenseObject.fromMap(Map map) {
-    return LicenseObject(name: map['name'], url: map['url']);
+    return LicenseObject(
+      name: map['name'],
+      url: map['url'],
+      identifier: map['identifier'],
+    );
   }
 
   /// Converts the [LicenseObject] to a map.
   Map<String, dynamic> toMap() {
-    return {'name': name, if (url != null) 'url': url};
+    return {
+      'name': name,
+      if (url != null) 'url': url,
+      if (identifier != null) 'identifier': identifier,
+    };
   }
 }
 
@@ -285,6 +326,7 @@ class JsonSchema<T> extends OpenApiObject<Map<String, dynamic>> {
     this.not,
     this.ref,
     this.defaultValue,
+    super.extensions,
   }) {
     if (dependencies != null) {
       for (final entry in dependencies!.entries) {
@@ -356,6 +398,7 @@ class JsonSchema<T> extends OpenApiObject<Map<String, dynamic>> {
       if (id != null) 'id': id,
       if (schema != null) r'$schema': schema,
       if (defaultValue != null) 'default': defaultValue,
+      ...super.toMap(),
     };
   }
 

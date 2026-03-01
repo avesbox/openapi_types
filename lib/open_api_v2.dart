@@ -37,7 +37,7 @@ class DocumentV2<T extends Map<String, dynamic>>
   final Map<String, ParameterObjectV2>? parameters;
 
   /// A declaration of which security schemes are applied for the API as a whole.
-  final Map<String, Map<String, List<String>>>? security;
+  final List<Map<String, List<String>>>? security;
 
   /// The security definitions (authentication schemes) for the API.
   final Map<String, SecuritySchemeObjectV2>? securityDefinitions;
@@ -149,7 +149,8 @@ class DocumentV2<T extends Map<String, dynamic>>
 }
 
 /// Represents a security scheme in the API.
-sealed class SecuritySchemeObjectV2 {
+sealed class SecuritySchemeObjectV2
+    extends OpenApiObject<Map<String, dynamic>> {
   /// The type of the security scheme.
   final String type;
 
@@ -157,38 +158,75 @@ sealed class SecuritySchemeObjectV2 {
   final String? description;
 
   /// Creates a [SecuritySchemeObjectV2] with the given parameters.
-  SecuritySchemeObjectV2({required this.type, this.description});
+  SecuritySchemeObjectV2({
+    required this.type,
+    this.description,
+    super.extensions,
+  });
 
   /// Converts the [SecuritySchemeObjectV2] to a map.
   Map<String, dynamic> toMap() {
-    return {'type': type, if (description != null) 'description': description};
+    return {
+      'type': type,
+      if (description != null) 'description': description,
+      ...super.toMap(),
+    };
   }
 
   /// Creates a [SecuritySchemeObjectV2] from a map.
   /// Throws an [ArgumentError] if the type is not recognized.
   factory SecuritySchemeObjectV2.fromMap(Map map) {
     final type = map['type'];
+    final extensions = _extractVendorExtensions(map);
     switch (type) {
       case 'basic':
-        return SecuritySchemeBasicV2(description: map['description']);
+        return SecuritySchemeBasicV2(
+          description: map['description'],
+          extensions: extensions,
+        );
       case 'apiKey':
         return SecuritySchemeApiKeyV2(
           name: map['name'],
           in_: map['in'],
           description: map['description'],
+          extensions: extensions,
         );
+      case 'oauth2':
       case 'oauth':
         return SecuritySchemeOAuth2V2.fromMap(map);
       default:
-        throw ArgumentError('Unsupported security scheme type: $type');
+        return SecuritySchemeCustomV2(
+          type: type,
+          description: map['description'],
+          properties: Map<String, dynamic>.from(map)
+            ..removeWhere(
+              (key, _) =>
+                  key == 'type' ||
+                  key == 'description' ||
+                  key.startsWith('x-'),
+            ),
+          extensions: extensions,
+        );
     }
   }
+}
+
+Map<String, dynamic>? _extractVendorExtensions(Map map) {
+  final extensions = <String, dynamic>{};
+  for (final entry in map.entries) {
+    final key = entry.key;
+    if (key is String && key.startsWith('x-')) {
+      extensions[key] = entry.value;
+    }
+  }
+  return extensions.isEmpty ? null : extensions;
 }
 
 /// Basic authentication security scheme.
 class SecuritySchemeBasicV2 extends SecuritySchemeObjectV2 {
   /// Creates a [SecuritySchemeBasicV2] with an optional [description].
-  SecuritySchemeBasicV2({super.description}) : super(type: 'basic');
+  SecuritySchemeBasicV2({super.description, super.extensions})
+    : super(type: 'basic');
 }
 
 /// API key security scheme.
@@ -204,17 +242,30 @@ class SecuritySchemeApiKeyV2 extends SecuritySchemeObjectV2 {
     required this.name,
     required this.in_,
     super.description,
+    super.extensions,
   }) : super(type: 'apiKey');
 
   @override
   Map<String, dynamic> toMap() {
-    return {
-      'name': name,
-      'in': in_,
-      if (description != null) 'description': description,
-      'type': type,
-      ...super.toMap(),
-    };
+    return {...super.toMap(), 'name': name, 'in': in_};
+  }
+}
+
+/// Custom/unknown security scheme for forward compatibility.
+class SecuritySchemeCustomV2 extends SecuritySchemeObjectV2 {
+  /// Additional properties defined by the scheme.
+  final Map<String, dynamic> properties;
+
+  SecuritySchemeCustomV2({
+    required super.type,
+    super.description,
+    this.properties = const {},
+    super.extensions,
+  });
+
+  @override
+  Map<String, dynamic> toMap() {
+    return {...super.toMap(), ...properties};
   }
 }
 
@@ -231,48 +282,48 @@ sealed class SecuritySchemeOAuth2V2 extends SecuritySchemeObjectV2 {
     required this.flow,
     required this.scopes,
     super.description,
+    super.extensions,
   }) : super(type: 'oauth2');
 
   @override
   Map<String, dynamic> toMap() {
-    return {
-      'flow': flow,
-      'scopes': scopes,
-      if (description != null) 'description': description,
-      'type': type,
-      ...super.toMap(),
-    };
+    return {'flow': flow, 'scopes': scopes, ...super.toMap()};
   }
 
   /// Creates a [SecuritySchemeOAuth2V2] from a map.
   /// Throws an [ArgumentError] if the flow is not recognized.
   factory SecuritySchemeOAuth2V2.fromMap(Map map) {
     final flow = map['flow'];
+    final extensions = _extractVendorExtensions(map);
     switch (flow) {
       case 'implicit':
         return SecuritySchemeOAuth2ImplicitV2(
           authorizationUrl: map['authorizationUrl'],
-          scopes: Map<String, String>.from(map['scopes']),
+          scopes: Map<String, String>.from(map['scopes'] ?? const {}),
           description: map['description'],
+          extensions: extensions,
         );
       case 'password':
         return SecuritySchemeOAuth2PasswordV2(
           tokenUrl: map['tokenUrl'],
-          scopes: Map<String, String>.from(map['scopes']),
+          scopes: Map<String, String>.from(map['scopes'] ?? const {}),
           description: map['description'],
+          extensions: extensions,
         );
       case 'application':
         return SecuritySchemeOAuth2ApplicationV2(
           tokenUrl: map['tokenUrl'],
-          scopes: Map<String, String>.from(map['scopes']),
+          scopes: Map<String, String>.from(map['scopes'] ?? const {}),
           description: map['description'],
+          extensions: extensions,
         );
       case 'accessCode':
         return SecuritySchemeOAuth2AccessCodeV2(
           authorizationUrl: map['authorizationUrl'],
           tokenUrl: map['tokenUrl'],
-          scopes: Map<String, String>.from(map['scopes']),
+          scopes: Map<String, String>.from(map['scopes'] ?? const {}),
           description: map['description'],
+          extensions: extensions,
         );
       default:
         throw ArgumentError('Unsupported OAuth2 flow type: $flow');
@@ -290,17 +341,12 @@ class SecuritySchemeOAuth2ImplicitV2 extends SecuritySchemeOAuth2V2 {
     required this.authorizationUrl,
     required super.scopes,
     super.description,
+    super.extensions,
   }) : super(flow: 'implicit');
 
   @override
   Map<String, dynamic> toMap() {
-    return {
-      'authorizationUrl': authorizationUrl,
-      'scopes': scopes,
-      if (description != null) 'description': description,
-      'flow': flow,
-      ...super.toMap(),
-    };
+    return {'authorizationUrl': authorizationUrl, ...super.toMap()};
   }
 }
 
@@ -314,17 +360,12 @@ class SecuritySchemeOAuth2PasswordV2 extends SecuritySchemeOAuth2V2 {
     required this.tokenUrl,
     required super.scopes,
     super.description,
+    super.extensions,
   }) : super(flow: 'password');
 
   @override
   Map<String, dynamic> toMap() {
-    return {
-      'tokenUrl': tokenUrl,
-      'scopes': scopes,
-      if (description != null) 'description': description,
-      'flow': flow,
-      ...super.toMap(),
-    };
+    return {'tokenUrl': tokenUrl, ...super.toMap()};
   }
 }
 
@@ -338,17 +379,12 @@ class SecuritySchemeOAuth2ApplicationV2 extends SecuritySchemeOAuth2V2 {
     required this.tokenUrl,
     required super.scopes,
     super.description,
+    super.extensions,
   }) : super(flow: 'application');
 
   @override
   Map<String, dynamic> toMap() {
-    return {
-      'tokenUrl': tokenUrl,
-      'scopes': scopes,
-      if (description != null) 'description': description,
-      'flow': flow,
-      ...super.toMap(),
-    };
+    return {'tokenUrl': tokenUrl, ...super.toMap()};
   }
 }
 
@@ -366,18 +402,12 @@ class SecuritySchemeOAuth2AccessCodeV2 extends SecuritySchemeOAuth2V2 {
     required this.tokenUrl,
     required super.scopes,
     super.description,
+    super.extensions,
   }) : super(flow: 'accessCode');
 
   @override
   Map<String, dynamic> toMap() {
-    return {
-      'authorizationUrl': authorizationUrl,
-      'tokenUrl': tokenUrl,
-      'scopes': scopes,
-      if (description != null) 'description': description,
-      'flow': flow,
-      ...super.toMap(),
-    };
+    return {'authorizationUrl': authorizationUrl, 'tokenUrl': tokenUrl, ...super.toMap()};
   }
 }
 
@@ -559,30 +589,55 @@ class ParameterObjectV2 extends OpenApiParameter<Map<String, dynamic>> {
   /// The extending format for the parameter type (e.g., "int32", "int64", "float", "double", "byte", "binary", "date", "date-time", "password").
   final String? format;
 
+  /// The items type definition for array parameters.
+  final Object? items;
+
+  /// The collection format for array parameters.
+  final String? collectionFormat;
+
   /// The schema defining the type used for the body parameter.
   final Object? schema;
 
   /// Creates a [ParameterObjectV2] with the given parameters.
-  const ParameterObjectV2({
+  ParameterObjectV2({
     required this.name,
     required this.in_,
     this.description,
     this.type,
     this.format,
+    this.items,
+    this.collectionFormat,
     this.schema,
     this.required,
     super.extensions,
-  });
+  }) {
+    if (type == 'array' && in_ != 'body' && items == null) {
+      throw ArgumentError(
+        'Non-body array parameters must define items in OpenAPI 2.0',
+      );
+    }
+    if (items != null && items is! ItemsObjectV2 && items is! ReferenceObject) {
+      throw ArgumentError(
+        'items must be ItemsObjectV2 or ReferenceObject',
+      );
+    }
+  }
 
   /// Creates a [ParameterObjectV2] from a map.
   factory ParameterObjectV2.fromMap(Map map) {
     return ParameterObjectV2(
       format: map['format'],
       type: map['type'],
+      collectionFormat: map['collectionFormat'],
       name: map['name'],
       in_: map['in'],
       description: map['description'],
       required: map['required'],
+      items: map['items'] != null
+          ? (map['items']['\$ref'] != null
+            ? ReferenceObject(map['items']['\$ref'])
+            : ItemsObjectV2.fromMap(map['items']))
+          : null,
       schema: map['schema'] != null
           ? (map['schema']['\$ref'] != null
                 ? ReferenceObject(map['schema']['\$ref'])
@@ -598,6 +653,11 @@ class ParameterObjectV2 extends OpenApiParameter<Map<String, dynamic>> {
       'in': in_,
       if (format != null) 'format': format,
       if (type != null) 'type': type,
+      if (collectionFormat != null) 'collectionFormat': collectionFormat,
+      if (items != null)
+        'items': items is ItemsObjectV2
+        ? (items as ItemsObjectV2).toMap()
+        : (items as ReferenceObject).toMap(),
       if (description != null) 'description': description,
       if (required != null) 'required': required,
       if (schema != null)

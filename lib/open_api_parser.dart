@@ -64,10 +64,10 @@ class OpenApiParser {
     if (version == '2.0') {
       return OpenApiVersion.v2;
     }
-    if (version.startsWith('3.0')) {
+    if (RegExp(r'^3\.0\.\d+$').hasMatch(version)) {
       return OpenApiVersion.v3_0;
     }
-    if (version.startsWith('3.1')) {
+    if (RegExp(r'^3\.1\.\d+$').hasMatch(version)) {
       return OpenApiVersion.v3_1;
     }
     throw Exception(
